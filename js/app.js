@@ -196,8 +196,10 @@ function enterApp(session, { autoSyncOnStart = false } = {}) {
   renderAll();
   switchTab('workout');
 
-  if (autoSyncOnStart && !session.isDemo && state.settings.autoSync && navigator.onLine) {
-    runSync({ silent: true });
+  if (autoSyncOnStart && !session.isDemo && state.settings.autoSync) {
+    window.setTimeout(() => {
+      if (navigator.onLine) runSync({ silent: true });
+    }, 50);
   }
 }
 
@@ -305,6 +307,12 @@ function renderSyncIndicators() {
     if (statusBadge) {
       statusBadge.className = 'status-badge';
       statusBadge.textContent = '동기화 중';
+    }
+  } else if (!navigator.onLine) {
+    pillText.textContent = '오프라인 저장';
+    if (statusBadge) {
+      statusBadge.className = 'status-badge';
+      statusBadge.textContent = '오프라인';
     }
   } else if (meta.status === 'error') {
     pill.classList.add('error');
@@ -1145,12 +1153,21 @@ function openWorkoutDetail(workoutId) {
 // ===== 동기화 =====
 async function runSync({ silent = false } = {}) {
   if (state.isSyncing || !state.session || state.session.isDemo) return;
+  if (!navigator.onLine) {
+    renderSyncIndicators();
+    if (!silent) showToast('오프라인 상태입니다. 기기에 안전하게 저장되었으며 연결 시 자동 동기화됩니다.');
+    return;
+  }
+
   state.isSyncing = true;
   renderSyncIndicators();
   const feedbackEl = document.getElementById('sync-feedback');
 
   try {
     const res = await syncWithGoogleSheets(state.settings, state.session);
+    if (!document.activeElement?.closest('#workout-exercises-list')) {
+      renderWorkoutView();
+    }
     renderRoutinesView();
     renderDailyView();
     renderHistoryView();
@@ -1161,6 +1178,7 @@ async function runSync({ silent = false } = {}) {
     }
     if (!silent) showToast('구글 시트 동기화가 완료되었습니다.', 'success');
   } catch (err) {
+    // 오프라인/지연/일시 오류여도 자동 로그인 세션은 절대 해제하지 않음
     saveSyncMeta({ status: 'error', message: err.message });
     if (feedbackEl && !silent) {
       feedbackEl.className = 'sync-feedback err';
@@ -1207,6 +1225,11 @@ function switchTab(tab) {
 // ===== 이벤트 바인딩 =====
 function bindEvents() {
   document.addEventListener('pointerdown', () => restTimer.unlockAudio(), { once: true });
+  window.addEventListener('online', () => {
+    renderSyncIndicators();
+    triggerAutoSync();
+  });
+  window.addEventListener('offline', () => renderSyncIndicators());
 
   // 인증 화면 탭 전환 & 폼 제출
   document.querySelectorAll('[data-auth-mode]').forEach((btn) => {

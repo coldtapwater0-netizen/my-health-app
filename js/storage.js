@@ -11,9 +11,13 @@ import {
 } from './data.js';
 
 const GLOBAL_KEYS = {
-  SESSION: 'fleekfit_session_v2',
+  SESSION: 'dayfit_session_v1',
+  LEGACY_SESSION: 'fleekfit_session_v2',
   SETTINGS: 'fleekfit_global_settings_v2'
 };
+
+const SESSION_COOKIE_NAME = 'dayfit_session';
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1년 (31,536,000초)
 
 export const DEFAULT_SETTINGS = {
   theme: 'light', // 'dark' | 'light' | 'system'
@@ -36,7 +40,69 @@ function readJSON(key, fallback) {
 }
 
 function writeJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 저장소 용량/권한 제한 시 쿠키 폴백에 의존
+  }
+}
+
+function removeStorageItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // 무시
+  }
+}
+
+function getCookieSecurityAttr() {
+  return typeof location !== 'undefined' && location.protocol === 'https:' ? '; Secure' : '';
+}
+
+function writeSessionCookie(session) {
+  if (typeof document === 'undefined' || !session?.nickname) return;
+  try {
+    const payload = encodeURIComponent(
+      JSON.stringify({
+        nickname: String(session.nickname),
+        pin: String(session.pin || ''),
+        isDemo: Boolean(session.isDemo),
+        loggedInAt: session.loggedInAt || new Date().toISOString()
+      })
+    );
+    document.cookie = `${SESSION_COOKIE_NAME}=${payload}; max-age=${SESSION_COOKIE_MAX_AGE}; path=/; SameSite=Lax${getCookieSecurityAttr()}`;
+  } catch {
+    // 쿠키 쓰기 실패 무시
+  }
+}
+
+function readSessionCookie() {
+  if (typeof document === 'undefined' || !document.cookie) return null;
+  try {
+    const prefix = `${SESSION_COOKIE_NAME}=`;
+    const parts = document.cookie.split(';');
+    for (const rawPart of parts) {
+      const part = rawPart.trim();
+      if (part.startsWith(prefix)) {
+        const parsed = JSON.parse(decodeURIComponent(part.slice(prefix.length)));
+        if (parsed && typeof parsed.nickname === 'string' && parsed.nickname.trim()) {
+          return parsed;
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function deleteSessionCookie() {
+  if (typeof document === 'undefined') return;
+  try {
+    document.cookie = `${SESSION_COOKIE_NAME}=; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${getCookieSecurityAttr()}`;
+  } catch {
+    // 무시
+  }
 }
 
 function getUserScope() {
@@ -51,15 +117,37 @@ function userKey(suffix) {
 
 // ===== 세션 & 전역 설정 =====
 export function getSession() {
-  return readJSON(GLOBAL_KEYS.SESSION, null);
+  const fromNew = readJSON(GLOBAL_KEYS.SESSION, null);
+  const fromLegacy = !fromNew ? readJSON(GLOBAL_KEYS.LEGACY_SESSION, null) : null;
+  const fromCookie = !fromNew && !fromLegacy ? readSessionCookie() : null;
+
+  const session = fromNew || fromLegacy || fromCookie;
+  if (!session || !session.nickname) return null;
+
+  // iOS PWA 등에서 한쪽 저장소가 지워져도 복구 후 양쪽 모두 재저장(1년 연장)
+  if (!fromNew) writeJSON(GLOBAL_KEYS.SESSION, session);
+  if (!fromLegacy) writeJSON(GLOBAL_KEYS.LEGACY_SESSION, session);
+  if (!readSessionCookie()) writeSessionCookie(session);
+
+  return session;
 }
 
 export function setSession(session) {
+  if (!session || !session.nickname) return;
   writeJSON(GLOBAL_KEYS.SESSION, session);
+  writeJSON(GLOBAL_KEYS.LEGACY_SESSION, session);
+  writeSessionCookie(session);
+  try {
+    navigator.storage?.persist?.().catch(() => {});
+  } catch {
+    // 미지원 브라우저 무시
+  }
 }
 
 export function clearSession() {
-  localStorage.removeItem(GLOBAL_KEYS.SESSION);
+  removeStorageItem(GLOBAL_KEYS.SESSION);
+  removeStorageItem(GLOBAL_KEYS.LEGACY_SESSION);
+  deleteSessionCookie();
 }
 
 export function getSettings() {
