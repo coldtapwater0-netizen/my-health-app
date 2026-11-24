@@ -1,0 +1,26 @@
+{
+  "name": "플릭핏 - 다크 운동일지",
+  "short_name": "플릭핏",
+  "description": "플릭 스타일 다크 모드 운동일지 & 구글 시트 동기화 PWA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0B0E",
+  "theme_color": "#0A0B0E",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
