@@ -1,8 +1,14 @@
 import {
+  getAllInBodyRaw,
   getAllRoutinesRaw,
+  getAllSupplementItemsRaw,
+  getAllSupplementLogsRaw,
   getAllWorkoutsRaw,
   mergeById,
+  saveAllInBodyRaw,
   saveAllRoutinesRaw,
+  saveAllSupplementItemsRaw,
+  saveAllSupplementLogsRaw,
   saveAllWorkoutsRaw,
   saveSyncMeta
 } from './storage.js';
@@ -10,10 +16,10 @@ import {
 function validateScriptUrl(url) {
   const trimmed = (url || '').trim();
   if (!trimmed) {
-    throw new Error('Apps Script 웹 앱 URL을 먼저 입력해 주세요.');
+    throw new Error('Apps Script 웹 앱 URL이 비어 있습니다.');
   }
   if (!/^https:\/\/script\.google(usercontent)?\.com\//i.test(trimmed)) {
-    throw new Error('https://script.google.com/... 형태의 Apps Script 웹 앱 URL을 입력해 주세요.');
+    throw new Error('올바른 Apps Script 웹 앱 URL(https://script.google.com/...)을 입력해 주세요.');
   }
   return trimmed;
 }
@@ -24,70 +30,70 @@ async function parseJsonResponse(res) {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('구글 시트 응답을 읽지 못했습니다. 배포 시 액세스 권한을 "모든 사용자"로 설정했는지 확인해 주세요.');
+    throw new Error('구글 시트 응답을 읽지 못했습니다. Apps Script 배포 시 "모든 사용자" 권한인지 확인해 주세요.');
   }
   if (!data.ok) {
+    if (String(data.error || '').includes('지원하지 않는 POST action')) {
+      throw new Error('구글 시트 Apps Script가 구버전입니다. 안내해 드린 최신 Code.gs로 "새 버전 배포"를 진행해 주세요.');
+    }
     throw new Error(data.error || '구글 시트 서버에서 오류가 발생했습니다.');
   }
   return data;
 }
 
-export async function testScriptConnection(url, secret = '') {
+async function postAction(url, payload) {
   const cleanUrl = validateScriptUrl(url);
-  const target = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}action=ping&secret=${encodeURIComponent(secret || '')}`;
+  const res = await fetch(cleanUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  return parseJsonResponse(res);
+}
+
+export async function testScriptConnection(url) {
+  const cleanUrl = validateScriptUrl(url);
+  const target = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}action=ping`;
   const res = await fetch(target, { method: 'GET', redirect: 'follow' });
   return parseJsonResponse(res);
 }
 
-export async function syncWithGoogleSheets(settings) {
-  const cleanUrl = validateScriptUrl(settings.scriptUrl);
-  const secret = settings.scriptSecret || '';
+export async function registerUser(url, nickname, pin) {
+  return postAction(url, { action: 'register', nickname, pin });
+}
 
+export async function loginUser(url, nickname, pin) {
+  return postAction(url, { action: 'login', nickname, pin });
+}
+
+export async function syncWithGoogleSheets(settings, session) {
+  if (!session || session.isDemo) {
+    return { skipped: true };
+  }
   if (!navigator.onLine) {
-    throw new Error('오프라인 상태입니다. 인터넷에 연결되면 자동으로 다시 동기화할 수 있습니다.');
+    throw new Error('오프라인 상태입니다. 인터넷 연결 후 다시 동기화됩니다.');
   }
 
-  // 1. 원격 데이터 조회
-  const getUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}action=getAll&secret=${encodeURIComponent(secret)}`;
-  const pullRes = await fetch(getUrl, { method: 'GET', redirect: 'follow' });
-  const remoteData = await parseJsonResponse(pullRes);
-
-  // 2. 로컬과 병합 (updatedAt 기준)
-  const mergedWorkouts = mergeById(getAllWorkoutsRaw(), remoteData.workouts || []);
-  const mergedRoutines = mergeById(getAllRoutinesRaw(), remoteData.routines || []);
-
-  saveAllWorkoutsRaw(mergedWorkouts);
-  saveAllRoutinesRaw(mergedRoutines);
-
-  // 3. 병합 결과를 구글 시트로 업로드 (CORS 프리플라이트 회피를 위해 text/plain 사용)
-  const pushRes = await fetch(cleanUrl, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify({
-      action: 'sync',
-      secret,
-      workouts: mergedWorkouts,
-      routines: mergedRoutines
-    })
+  const res = await postAction(settings.scriptUrl, {
+    action: 'sync',
+    nickname: session.nickname,
+    pin: session.pin,
+    workouts: getAllWorkoutsRaw(),
+    routines: getAllRoutinesRaw(),
+    supplementItems: getAllSupplementItemsRaw(),
+    supplementLogs: getAllSupplementLogsRaw(),
+    inbodyRecords: getAllInBodyRaw()
   });
-  const pushData = await parseJsonResponse(pushRes);
 
-  if (Array.isArray(pushData.workouts)) {
-    saveAllWorkoutsRaw(mergeById(mergedWorkouts, pushData.workouts));
-  }
-  if (Array.isArray(pushData.routines)) {
-    saveAllRoutinesRaw(mergeById(mergedRoutines, pushData.routines));
-  }
+  if (Array.isArray(res.workouts)) saveAllWorkoutsRaw(mergeById(getAllWorkoutsRaw(), res.workouts));
+  if (Array.isArray(res.routines)) saveAllRoutinesRaw(mergeById(getAllRoutinesRaw(), res.routines));
+  if (Array.isArray(res.supplementItems)) saveAllSupplementItemsRaw(mergeById(getAllSupplementItemsRaw(), res.supplementItems));
+  if (Array.isArray(res.supplementLogs)) saveAllSupplementLogsRaw(mergeById(getAllSupplementLogsRaw(), res.supplementLogs));
+  if (Array.isArray(res.inbodyRecords)) saveAllInBodyRaw(mergeById(getAllInBodyRaw(), res.inbodyRecords));
 
   const now = new Date().toISOString();
-  saveSyncMeta({
-    lastSyncAt: now,
-    status: 'synced',
-    message: '구글 시트와 동기화 완료'
-  });
+  saveSyncMeta({ lastSyncAt: now, status: 'synced', message: '구글 시트 동기화 완료' });
 
   return {
     syncedAt: now,

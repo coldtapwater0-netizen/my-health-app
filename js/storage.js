@@ -1,23 +1,23 @@
 import {
   DEFAULT_ROUTINES,
+  DEFAULT_SCRIPT_URL,
+  DEFAULT_SUPPLEMENTS,
   EXERCISE_CATALOG,
   calcEst1RM,
+  createDemoInBody,
+  createDemoSupplementLogs,
   createDemoWorkouts,
   toLocalDateStr
 } from './data.js';
 
-const KEYS = {
-  WORKOUTS: 'fleekfit_workouts_v1',
-  ROUTINES: 'fleekfit_routines_v1',
-  DRAFT: 'fleekfit_draft_v1',
-  SETTINGS: 'fleekfit_settings_v1',
-  CUSTOM_EXERCISES: 'fleekfit_custom_exercises_v1',
-  SYNC_META: 'fleekfit_sync_meta_v1'
+const GLOBAL_KEYS = {
+  SESSION: 'fleekfit_session_v2',
+  SETTINGS: 'fleekfit_global_settings_v2'
 };
 
 export const DEFAULT_SETTINGS = {
-  scriptUrl: '',
-  scriptSecret: '',
+  theme: 'dark', // 'dark' | 'light' | 'system'
+  scriptUrl: DEFAULT_SCRIPT_URL,
   autoSync: true,
   defaultRestSec: 90,
   autoStartRest: true,
@@ -38,20 +38,68 @@ function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-export function initStorage() {
-  if (localStorage.getItem(KEYS.ROUTINES) === null) {
-    writeJSON(KEYS.ROUTINES, DEFAULT_ROUTINES);
+function getUserScope() {
+  const session = getSession();
+  const nick = session?.nickname ? session.nickname.trim().toLowerCase() : 'guest';
+  return `fleekfit_v2_${encodeURIComponent(nick)}`;
+}
+
+function userKey(suffix) {
+  return `${getUserScope()}_${suffix}`;
+}
+
+// ===== 세션 & 전역 설정 =====
+export function getSession() {
+  return readJSON(GLOBAL_KEYS.SESSION, null);
+}
+
+export function setSession(session) {
+  writeJSON(GLOBAL_KEYS.SESSION, session);
+}
+
+export function clearSession() {
+  localStorage.removeItem(GLOBAL_KEYS.SESSION);
+}
+
+export function getSettings() {
+  const saved = readJSON(GLOBAL_KEYS.SETTINGS, {});
+  return {
+    ...DEFAULT_SETTINGS,
+    ...saved,
+    scriptUrl: saved.scriptUrl || DEFAULT_SCRIPT_URL
+  };
+}
+
+export function saveSettings(partial) {
+  const next = { ...getSettings(), ...partial };
+  writeJSON(GLOBAL_KEYS.SETTINGS, next);
+  return next;
+}
+
+export function initUserStorage(nickname, { seedDemo = false } = {}) {
+  const scope = `fleekfit_v2_${encodeURIComponent(nickname.trim().toLowerCase())}`;
+  const k = (s) => `${scope}_${s}`;
+
+  if (localStorage.getItem(k('routines')) === null) {
+    writeJSON(k('routines'), DEFAULT_ROUTINES);
   }
-  if (localStorage.getItem(KEYS.WORKOUTS) === null) {
-    writeJSON(KEYS.WORKOUTS, createDemoWorkouts());
+  if (localStorage.getItem(k('supp_items')) === null) {
+    writeJSON(k('supp_items'), DEFAULT_SUPPLEMENTS);
   }
-  if (localStorage.getItem(KEYS.SETTINGS) === null) {
-    writeJSON(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  if (localStorage.getItem(k('workouts')) === null) {
+    writeJSON(k('workouts'), seedDemo ? createDemoWorkouts() : []);
+  }
+  if (localStorage.getItem(k('supp_logs')) === null) {
+    writeJSON(k('supp_logs'), seedDemo ? createDemoSupplementLogs() : []);
+  }
+  if (localStorage.getItem(k('inbody')) === null) {
+    writeJSON(k('inbody'), seedDemo ? createDemoInBody() : []);
   }
 }
 
+// ===== 운동 기록 =====
 export function getAllWorkoutsRaw() {
-  return readJSON(KEYS.WORKOUTS, []);
+  return readJSON(userKey('workouts'), []);
 }
 
 export function getActiveWorkouts() {
@@ -61,7 +109,7 @@ export function getActiveWorkouts() {
 }
 
 export function saveAllWorkoutsRaw(workouts) {
-  writeJSON(KEYS.WORKOUTS, workouts);
+  writeJSON(userKey('workouts'), workouts);
 }
 
 export function upsertWorkout(workout) {
@@ -82,22 +130,20 @@ export function softDeleteWorkout(id) {
   const list = getAllWorkoutsRaw();
   const idx = list.findIndex((item) => item.id === id);
   if (idx >= 0) {
-    list[idx] = {
-      ...list[idx],
-      deleted: true,
-      updatedAt: new Date().toISOString()
-    };
+    list[idx] = { ...list[idx], deleted: true, updatedAt: new Date().toISOString() };
     saveAllWorkoutsRaw(list);
   }
 }
 
 export function clearDemoWorkouts() {
-  const list = getAllWorkoutsRaw().filter((w) => !w.isDemo);
-  saveAllWorkoutsRaw(list);
+  saveAllWorkoutsRaw(getAllWorkoutsRaw().filter((w) => !w.isDemo));
+  saveAllSupplementLogsRaw(getAllSupplementLogsRaw().filter((l) => !l.isDemo));
+  saveAllInBodyRaw(getAllInBodyRaw().filter((r) => !r.isDemo));
 }
 
+// ===== 루틴 =====
 export function getAllRoutinesRaw() {
-  return readJSON(KEYS.ROUTINES, DEFAULT_ROUTINES);
+  return readJSON(userKey('routines'), DEFAULT_ROUTINES);
 }
 
 export function getActiveRoutines() {
@@ -105,7 +151,7 @@ export function getActiveRoutines() {
 }
 
 export function saveAllRoutinesRaw(routines) {
-  writeJSON(KEYS.ROUTINES, routines);
+  writeJSON(userKey('routines'), routines);
 }
 
 export function upsertRoutine(routine) {
@@ -126,11 +172,7 @@ export function softDeleteRoutine(id) {
   const list = getAllRoutinesRaw();
   const idx = list.findIndex((item) => item.id === id);
   if (idx >= 0) {
-    list[idx] = {
-      ...list[idx],
-      deleted: true,
-      updatedAt: new Date().toISOString()
-    };
+    list[idx] = { ...list[idx], deleted: true, updatedAt: new Date().toISOString() };
     saveAllRoutinesRaw(list);
   }
 }
@@ -142,39 +184,142 @@ export function resetDefaultRoutines() {
   saveAllRoutinesRaw([...defaults, ...customOnly]);
 }
 
-export function getSettings() {
-  return { ...DEFAULT_SETTINGS, ...readJSON(KEYS.SETTINGS, {}) };
+// ===== 보충제 항목 & 체크 로그 =====
+export function getAllSupplementItemsRaw() {
+  return readJSON(userKey('supp_items'), DEFAULT_SUPPLEMENTS);
 }
 
-export function saveSettings(partial) {
-  const next = { ...getSettings(), ...partial };
-  writeJSON(KEYS.SETTINGS, next);
+export function getActiveSupplementItems() {
+  return getAllSupplementItemsRaw().filter((item) => !item.deleted);
+}
+
+export function saveAllSupplementItemsRaw(items) {
+  writeJSON(userKey('supp_items'), items);
+}
+
+export function upsertSupplementItem(item) {
+  const list = getAllSupplementItemsRaw();
+  const idx = list.findIndex((x) => x.id === item.id);
+  const next = {
+    ...item,
+    updatedAt: new Date().toISOString(),
+    deleted: Boolean(item.deleted)
+  };
+  if (idx >= 0) list[idx] = next;
+  else list.push(next);
+  saveAllSupplementItemsRaw(list);
   return next;
 }
 
+export function softDeleteSupplementItem(id) {
+  const list = getAllSupplementItemsRaw();
+  const idx = list.findIndex((x) => x.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], deleted: true, updatedAt: new Date().toISOString() };
+    saveAllSupplementItemsRaw(list);
+  }
+}
+
+export function getAllSupplementLogsRaw() {
+  return readJSON(userKey('supp_logs'), []);
+}
+
+export function saveAllSupplementLogsRaw(logs) {
+  writeJSON(userKey('supp_logs'), logs);
+}
+
+export function getSupplementLogByDate(dateStr) {
+  return (
+    getAllSupplementLogsRaw().find((l) => !l.deleted && l.date === dateStr) || {
+      id: `supp_log_${dateStr}`,
+      date: dateStr,
+      checkedIds: []
+    }
+  );
+}
+
+export function toggleSupplementCheck(dateStr, itemId) {
+  const list = getAllSupplementLogsRaw();
+  const logId = `supp_log_${dateStr}`;
+  const idx = list.findIndex((l) => l.id === logId || l.date === dateStr);
+  const current = idx >= 0 ? list[idx] : { id: logId, date: dateStr, checkedIds: [], deleted: false };
+  const set = new Set(current.checkedIds || []);
+  if (set.has(itemId)) set.delete(itemId);
+  else set.add(itemId);
+
+  const next = {
+    ...current,
+    id: current.id || logId,
+    date: dateStr,
+    checkedIds: Array.from(set),
+    updatedAt: new Date().toISOString(),
+    deleted: false
+  };
+  if (idx >= 0) list[idx] = next;
+  else list.unshift(next);
+  saveAllSupplementLogsRaw(list);
+  return next;
+}
+
+// ===== 체중 · 인바디 =====
+export function getAllInBodyRaw() {
+  return readJSON(userKey('inbody'), []);
+}
+
+export function getActiveInBodyRecords() {
+  return getAllInBodyRaw()
+    .filter((r) => !r.deleted)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+}
+
+export function saveAllInBodyRaw(records) {
+  writeJSON(userKey('inbody'), records);
+}
+
+export function upsertInBodyRecord(record) {
+  const list = getAllInBodyRaw();
+  const id = record.id || `inbody_${record.date}`;
+  const idx = list.findIndex((r) => r.id === id || (!r.deleted && r.date === record.date));
+  const next = {
+    ...record,
+    id,
+    updatedAt: new Date().toISOString(),
+    deleted: false
+  };
+  if (idx >= 0) list[idx] = next;
+  else list.unshift(next);
+  saveAllInBodyRaw(list);
+  return next;
+}
+
+export function softDeleteInBodyRecord(id) {
+  const list = getAllInBodyRaw();
+  const idx = list.findIndex((r) => r.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], deleted: true, updatedAt: new Date().toISOString() };
+    saveAllInBodyRaw(list);
+  }
+}
+
+// ===== 동기화 메타, 커스텀 종목, 초안 =====
 export function getSyncMeta() {
-  return readJSON(KEYS.SYNC_META, {
-    lastSyncAt: null,
-    status: 'idle',
-    message: ''
-  });
+  return readJSON(userKey('sync_meta'), { lastSyncAt: null, status: 'idle', message: '' });
 }
 
 export function saveSyncMeta(meta) {
   const next = { ...getSyncMeta(), ...meta };
-  writeJSON(KEYS.SYNC_META, next);
+  writeJSON(userKey('sync_meta'), next);
   return next;
 }
 
 export function getCustomExercises() {
-  return readJSON(KEYS.CUSTOM_EXERCISES, []);
+  return readJSON(userKey('custom_ex'), []);
 }
 
-export function addCustomExercise(name, muscle) {
+export function addCustomExercise(name, muscle, trackingType = 'weighted') {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const all = getAllExercises();
-  const existing = all.find((ex) => ex.name === trimmed);
+  const existing = getAllExercises().find((ex) => ex.name === trimmed);
   if (existing) return existing;
 
   const custom = getCustomExercises();
@@ -182,15 +327,20 @@ export function addCustomExercise(name, muscle) {
     id: `ex_custom_${Date.now()}`,
     name: trimmed,
     muscle: muscle || '코어',
+    trackingType: trackingType || 'weighted',
     isCustom: true
   };
   custom.push(created);
-  writeJSON(KEYS.CUSTOM_EXERCISES, custom);
+  writeJSON(userKey('custom_ex'), custom);
   return created;
 }
 
 export function getAllExercises() {
   return [...EXERCISE_CATALOG, ...getCustomExercises()];
+}
+
+export function hasSavedDraft() {
+  return localStorage.getItem(userKey('draft')) !== null;
 }
 
 export function createEmptyDraft() {
@@ -205,16 +355,16 @@ export function createEmptyDraft() {
 }
 
 export function getDraft() {
-  return readJSON(KEYS.DRAFT, null) || createEmptyDraft();
+  return readJSON(userKey('draft'), null) || createEmptyDraft();
 }
 
 export function saveDraft(draft) {
-  writeJSON(KEYS.DRAFT, draft);
+  writeJSON(userKey('draft'), draft);
 }
 
 export function clearDraft() {
   const fresh = createEmptyDraft();
-  writeJSON(KEYS.DRAFT, fresh);
+  writeJSON(userKey('draft'), fresh);
   return fresh;
 }
 
@@ -223,24 +373,19 @@ export function getLastExerciseRecord(exerciseName) {
   for (const w of workouts) {
     const found = (w.exercises || []).find((ex) => ex.name === exerciseName);
     if (!found) continue;
-    const completed = (found.sets || []).filter((s) => s.completed);
-    if (completed.length === 0) continue;
+    const completed = (found.sets || []).filter((s) => s.completed && s.setType !== 'warmup');
+    if (!completed.length) continue;
 
     let bestSet = completed[0];
     let best1RM = calcEst1RM(bestSet.weight, bestSet.reps);
     for (const s of completed) {
       const rm = calcEst1RM(s.weight, s.reps);
-      if (rm > best1RM) {
+      if (rm > best1RM || (rm === best1RM && (Number(s.reps) || 0) > (Number(bestSet.reps) || 0))) {
         best1RM = rm;
         bestSet = s;
       }
     }
-    return {
-      date: w.date,
-      sets: completed,
-      bestSet,
-      best1RM
-    };
+    return { date: w.date, sets: completed, bestSet, best1RM };
   }
   return null;
 }
@@ -270,10 +415,14 @@ export function mergeById(localItems = [], remoteItems = []) {
 export function exportAllDataJSON() {
   return JSON.stringify(
     {
-      version: 1,
+      version: 2,
+      nickname: getSession()?.nickname || 'guest',
       exportedAt: new Date().toISOString(),
       workouts: getAllWorkoutsRaw(),
       routines: getAllRoutinesRaw(),
+      supplementItems: getAllSupplementItemsRaw(),
+      supplementLogs: getAllSupplementLogsRaw(),
+      inbodyRecords: getAllInBodyRaw(),
       customExercises: getCustomExercises()
     },
     null,
@@ -286,12 +435,11 @@ export function importAllDataJSON(jsonText) {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('올바른 백업 파일 형식이 아닙니다.');
   }
-  if (Array.isArray(parsed.workouts)) {
-    saveAllWorkoutsRaw(mergeById(getAllWorkoutsRaw(), parsed.workouts));
-  }
-  if (Array.isArray(parsed.routines)) {
-    saveAllRoutinesRaw(mergeById(getAllRoutinesRaw(), parsed.routines));
-  }
+  if (Array.isArray(parsed.workouts)) saveAllWorkoutsRaw(mergeById(getAllWorkoutsRaw(), parsed.workouts));
+  if (Array.isArray(parsed.routines)) saveAllRoutinesRaw(mergeById(getAllRoutinesRaw(), parsed.routines));
+  if (Array.isArray(parsed.supplementItems)) saveAllSupplementItemsRaw(mergeById(getAllSupplementItemsRaw(), parsed.supplementItems));
+  if (Array.isArray(parsed.supplementLogs)) saveAllSupplementLogsRaw(mergeById(getAllSupplementLogsRaw(), parsed.supplementLogs));
+  if (Array.isArray(parsed.inbodyRecords)) saveAllInBodyRaw(mergeById(getAllInBodyRaw(), parsed.inbodyRecords));
   if (Array.isArray(parsed.customExercises)) {
     const existing = getCustomExercises();
     const names = new Set(existing.map((e) => e.name));
@@ -302,6 +450,6 @@ export function importAllDataJSON(jsonText) {
         names.add(ex.name);
       }
     }
-    writeJSON(KEYS.CUSTOM_EXERCISES, merged);
+    writeJSON(userKey('custom_ex'), merged);
   }
 }

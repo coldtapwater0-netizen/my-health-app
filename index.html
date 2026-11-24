@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0A0B0E">
-  <meta name="description" content="플릭(Fleek) 스타일 다크 모드 운동일지 & 구글 시트 동기화 PWA">
+  <meta id="meta-theme-color" name="theme-color" content="#0A0B0E">
+  <meta name="description" content="플릭핏(FleekFit) — 멀티유저 다크/라이트 개인 헬스 일지 & 구글 시트 동기화 PWA">
 
   <!-- iOS Safari PWA 홈 화면 추가 설정 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,15 +14,56 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
   <link rel="manifest" href="./manifest.json">
 
-  <title>플릭핏 — 다크 운동일지</title>
+  <title>플릭핏 — 개인 헬스 일지</title>
 
-  <!-- Pretendard 폰트 (오프라인 시 시스템 고딕 폰트로 자동 폴백) -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="app-shell">
+  <!-- 0. 사용자 시작 / 로그인 화면 -->
+  <section id="auth-screen" class="auth-screen hidden" aria-label="사용자 시작 화면">
+    <div class="auth-card">
+      <div class="auth-hero">
+        <div class="auth-logo-lg" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>
+          </svg>
+        </div>
+        <h1 class="auth-title">플릭핏 (FleekFit)</h1>
+        <p class="auth-sub">내 구글 시트에 자동 저장되는 나만의 운동 · 보충제 · 인바디 일지</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist">
+        <button id="auth-tab-register" class="auth-tab-btn active" type="button" data-auth-mode="register">새로 시작하기</button>
+        <button id="auth-tab-login" class="auth-tab-btn" type="button" data-auth-mode="login">기존 사용자로 로그인</button>
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="auth-nickname">닉네임 (2~12자)</label>
+          <input id="auth-nickname" class="dark-input" type="text" placeholder="예: 철수, 지수" minlength="2" maxlength="12" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-pin">4자리 숫자 PIN</label>
+          <input id="auth-pin" class="dark-input tabular" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" placeholder="숫자 4자리 (예: 1234)" required autocomplete="current-password">
+        </div>
+
+        <div id="auth-feedback" class="sync-feedback hidden"></div>
+
+        <button id="btn-auth-submit" class="btn btn-primary btn-block" type="submit">닉네임 등록하고 시작하기</button>
+      </form>
+
+      <div class="auth-divider">또는</div>
+
+      <button id="btn-auth-demo" class="btn btn-secondary btn-block" type="button">
+        구글 시트 없이 체험 모드로 먼저 둘러보기
+      </button>
+    </div>
+  </section>
+
+  <!-- 메인 앱 셸 -->
+  <div id="app-shell" class="app-shell hidden">
     <!-- 상단 앱 바 -->
     <header class="top-bar">
       <div class="brand">
@@ -32,24 +73,29 @@
           </svg>
         </div>
         <div>
-          <span class="brand-name">플릭핏</span>
+          <div class="brand-title-row">
+            <span class="brand-name">플릭핏</span>
+            <span id="user-badge" class="user-chip">사용자</span>
+          </div>
           <span class="brand-tag">FLEEK LOG</span>
         </div>
       </div>
 
       <div class="top-bar-right">
+        <button id="btn-open-plate-calc" class="top-tool-btn" type="button" title="바벨 원판 무게 계산기">
+          ⚖️ 원판
+        </button>
         <button id="sync-pill" class="sync-pill" type="button" title="구글 시트 동기화 상태">
           <span class="sync-dot"></span>
-          <span id="sync-pill-text">로컬 저장</span>
+          <span id="sync-pill-text">대기 중</span>
         </button>
       </div>
     </header>
 
-    <!-- 메인 콘텐츠 영역 -->
+    <!-- 메인 콘텐츠 -->
     <main class="main-content">
       <!-- 1. 운동 기록 탭 -->
       <section id="view-workout" class="tab-view active" aria-label="오늘의 운동 기록">
-        <!-- 활성 운동 세션 헤더 -->
         <div class="card session-card">
           <div class="session-top">
             <div class="session-title-wrap">
@@ -67,19 +113,18 @@
               </div>
             </div>
             <div class="session-actions">
-              <button id="btn-reset-draft" class="btn btn-ghost btn-sm" type="button" title="현재 작성 중인 운동 비우기">초기화</button>
+              <button id="btn-reset-draft" class="btn btn-ghost btn-sm" type="button">초기화</button>
               <button id="btn-finish-workout" class="btn btn-primary btn-sm" type="button">완료 저장</button>
             </div>
           </div>
 
-          <!-- 실시간 KPI 요약 -->
           <div class="kpi-grid">
             <div class="kpi-box">
               <span class="kpi-label">완료 세트</span>
               <strong id="summary-sets" class="kpi-value tabular">0 / 0</strong>
             </div>
             <div class="kpi-box">
-              <span class="kpi-label">총 볼륨</span>
+              <span class="kpi-label">총 볼륨 (W 제외)</span>
               <strong id="summary-volume" class="kpi-value tabular text-blue">0 kg</strong>
             </div>
             <div class="kpi-box">
@@ -88,29 +133,25 @@
             </div>
           </div>
 
-          <!-- 빠른 휴식 타이머 시작 + 알림음 토글 -->
           <div class="quick-timer-strip">
-            <span class="quick-timer-label">빠른 휴식 타이머</span>
+            <span class="quick-timer-label">세트 번호 탭: 일반 / W(워밍업) / D(드롭)</span>
             <div class="quick-timer-btns">
               <button class="chip-btn" type="button" data-quick-rest="60">60초</button>
               <button class="chip-btn" type="button" data-quick-rest="90">90초</button>
               <button class="chip-btn" type="button" data-quick-rest="120">2분</button>
-              <button id="btn-inline-sound" class="chip-btn sound-chip" type="button" title="휴식 종료 알림음 켜기/끄기">
+              <button id="btn-inline-sound" class="chip-btn sound-chip" type="button">
                 🔔 <span id="inline-sound-label">알림음 ON</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 종목 리스트 -->
         <div id="workout-exercises-list" class="exercises-stack"></div>
 
-        <!-- 종목 추가 버튼 -->
         <button id="btn-add-exercise" class="btn btn-outline-accent btn-block" type="button">
-          + 운동 종목 추가하기
+          + 운동 종목 추가하기 (중량 · 맨몸)
         </button>
 
-        <!-- 빠른 루틴 불러오기 -->
         <div class="section-block">
           <div class="section-head">
             <h2 class="section-title">루틴으로 빠르게 시작</h2>
@@ -125,7 +166,7 @@
         <div class="view-header">
           <div>
             <h1 class="view-title">루틴 관리</h1>
-            <p class="view-subtitle">기본 분할 루틴을 바로 시작하거나 나만의 루틴을 만드세요.</p>
+            <p class="view-subtitle">기본 분할 루틴을 시작하거나 나만의 루틴을 만드세요.</p>
           </div>
           <button id="btn-new-routine" class="btn btn-primary btn-sm" type="button">+ 새 루틴</button>
         </div>
@@ -142,12 +183,80 @@
         <div id="routines-list" class="routines-stack"></div>
       </section>
 
-      <!-- 3. 기록·성장 탭 -->
-      <section id="view-history" class="tab-view" aria-label="기록 및 성장 그래프">
+      <!-- 3. 데일리 (보충제 + 체중·인바디) 탭 -->
+      <section id="view-daily" class="tab-view" aria-label="보충제 및 인바디 기록">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">데일리 케어</h1>
+            <p class="view-subtitle">보충제 하루 체크와 체중·인바디를 간편하게 기록하세요.</p>
+          </div>
+          <input id="daily-date-input" class="session-date-input" type="date" aria-label="데일리 기록 날짜">
+        </div>
+
+        <!-- 보충제 체크 카드 -->
+        <div class="card settings-card">
+          <div class="settings-head">
+            <div>
+              <h2 class="settings-title">오늘의 보충제 체크</h2>
+              <p class="settings-desc">원터치로 복용 여부를 체크하면 구글 시트에 자동 저장됩니다.</p>
+            </div>
+            <button id="btn-add-supplement" class="btn btn-outline-accent btn-xs" type="button">+ 항목 추가</button>
+          </div>
+
+          <div class="supp-progress-wrap">
+            <div class="supp-progress-top">
+              <span class="text-secondary">오늘 섭취 달성률</span>
+              <strong id="daily-supp-progress" class="tabular text-mint">0 / 0 완료</strong>
+            </div>
+            <div class="progress-track">
+              <div id="daily-supp-bar" class="progress-fill" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div id="daily-supp-list" class="supp-list"></div>
+        </div>
+
+        <!-- 체중 · 인바디 기록 카드 -->
+        <div class="card settings-card">
+          <div class="settings-head">
+            <div>
+              <h2 class="settings-title">체중 · 인바디 기록</h2>
+              <p class="settings-desc">선택한 날짜(<span id="inbody-date-label">오늘</span>)의 신체 변화를 기록합니다.</p>
+            </div>
+          </div>
+
+          <div class="inbody-form-grid">
+            <label class="form-group">
+              <span class="form-label">체중 (kg)</span>
+              <input id="inbody-weight" class="dark-input tabular" type="number" inputmode="decimal" step="0.1" min="20" max="250" placeholder="72.4">
+            </label>
+            <label class="form-group">
+              <span class="form-label">골격근량 (kg)</span>
+              <input id="inbody-muscle" class="dark-input tabular" type="number" inputmode="decimal" step="0.1" min="5" max="120" placeholder="34.2">
+            </label>
+            <label class="form-group">
+              <span class="form-label">체지방률 (%)</span>
+              <input id="inbody-fat" class="dark-input tabular" type="number" inputmode="decimal" step="0.1" min="2" max="70" placeholder="16.5">
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inbody-memo">컨디션 메모 (선택)</label>
+            <input id="inbody-memo" class="dark-input" type="text" placeholder="예: 공복 측정, 수분 충분">
+          </div>
+
+          <button id="btn-save-inbody" class="btn btn-primary btn-block" type="button">인바디 기록 저장하기</button>
+
+          <div id="inbody-recent-list" class="inbody-recent-list"></div>
+        </div>
+      </section>
+
+      <!-- 4. 기록·성장 탭 -->
+      <section id="view-history" class="tab-view" aria-label="출석 캘린더 및 성장 그래프">
         <div class="view-header">
           <div>
             <h1 class="view-title">기록 · 성장</h1>
-            <p class="view-subtitle">날짜별 일지와 볼륨·1RM·부위별 자극 추이</p>
+            <p class="view-subtitle">출석 캘린더와 운동·인바디 성장 추이</p>
           </div>
           <div class="segmented-control" role="group" aria-label="기간 선택">
             <button id="period-30d" class="seg-btn active" type="button" data-period="30">최근 30일</button>
@@ -155,111 +264,176 @@
           </div>
         </div>
 
-        <!-- 전체 요약 KPI -->
-        <div class="kpi-grid history-kpi-grid">
-          <div class="card kpi-card">
-            <span class="kpi-label">운동 완료</span>
-            <strong id="hist-kpi-count" class="kpi-value tabular">0회</strong>
-          </div>
-          <div class="card kpi-card">
-            <span class="kpi-label">누적 총 볼륨</span>
-            <strong id="hist-kpi-volume" class="kpi-value tabular text-blue">0 kg</strong>
-          </div>
-          <div class="card kpi-card">
-            <span class="kpi-label">회당 평균 볼륨</span>
-            <strong id="hist-kpi-avg" class="kpi-value tabular text-mint">0 kg</strong>
-          </div>
-        </div>
-
-        <!-- 총 볼륨 성장 그래프 -->
+        <!-- 출석 캘린더 (항상 상단에서 한눈에 확인) -->
         <div class="card chart-card">
           <div class="chart-head">
             <div>
-              <h2 class="chart-title">총 볼륨 성장 그래프</h2>
-              <p class="chart-sub">날짜별 완료 세트 총 무게(kg × 횟수)</p>
+              <h2 class="chart-title">운동 출석 캘린더</h2>
+              <p class="chart-sub">날짜를 누르면 그날의 운동 · 보충제 기록을 한눈에 봅니다.</p>
             </div>
-            <span id="volume-trend-badge" class="trend-badge neutral">데이터 대기</span>
-          </div>
-          <div id="chart-volume" class="chart-box"></div>
-        </div>
-
-        <!-- 종목별 1RM 성장 그래프 -->
-        <div class="card chart-card">
-          <div class="chart-head chart-head-stack">
-            <div>
-              <h2 class="chart-title">종목별 추정 1RM 성장</h2>
-              <p class="chart-sub">Epley 공식: 무게 × (1 + 횟수 ÷ 30)</p>
-            </div>
-            <div class="chart-controls-row">
-              <select id="select-1rm-exercise" class="dark-select" aria-label="1RM 조회 종목 선택"></select>
-              <span id="pr-badge" class="pr-badge tabular">PR 0 kg</span>
-            </div>
-          </div>
-          <div id="chart-1rm" class="chart-box"></div>
-        </div>
-
-        <!-- 부위별 자극 비중 -->
-        <div class="card chart-card">
-          <div class="chart-head">
-            <div>
-              <h2 class="chart-title">부위별 자극 비중</h2>
-              <p class="chart-sub">가슴 · 등 · 하체 · 어깨 · 팔 · 코어</p>
-            </div>
-            <div class="segmented-control segmented-sm" role="group" aria-label="자극 비중 기준">
-              <button id="muscle-mode-sets" class="seg-btn active" type="button" data-muscle-mode="sets">세트 수</button>
-              <button id="muscle-mode-volume" class="seg-btn" type="button" data-muscle-mode="volume">볼륨</button>
-            </div>
-          </div>
-          <div id="chart-muscle" class="chart-box"></div>
-        </div>
-
-        <!-- 월간 캘린더 & 날짜별 운동 일지 -->
-        <div class="card chart-card">
-          <div class="chart-head">
-            <div>
-              <h2 class="chart-title">날짜별 운동 일지</h2>
-              <p class="chart-sub">파란 점이 있는 날짜를 누르면 해당 일지만 필터링됩니다.</p>
-            </div>
-            <button id="btn-clear-date-filter" class="btn btn-ghost btn-xs hidden" type="button">전체 보기</button>
+            <span id="cal-attendance-badge" class="trend-badge up tabular">이번 달 0일</span>
           </div>
           <div id="history-calendar" class="calendar-wrap"></div>
-          <div id="history-list" class="history-stack"></div>
+          <div class="cal-legend">
+            <span><i class="cal-dot-w"></i> 운동 완료</span>
+            <span><i class="cal-dot-s"></i> 보충제 체크</span>
+            <button id="btn-clear-date-filter" class="btn btn-ghost btn-xs hidden" type="button">선택 해제</button>
+          </div>
+          <div id="day-summary-card" class="day-summary-card hidden"></div>
+        </div>
+
+        <!-- 서브 탭 전환: 운동 성장 / 인바디 추이 -->
+        <div class="segmented-control segmented-full" role="tablist">
+          <button id="hist-tab-workout" class="seg-btn active" type="button" data-hist-sub="workout">운동 성장 · 일지</button>
+          <button id="hist-tab-inbody" class="seg-btn" type="button" data-hist-sub="inbody">체중 · 인바디 추이</button>
+        </div>
+
+        <!-- 패널 A: 운동 성장 & 일지 -->
+        <div id="hist-panel-workout" class="exercises-stack">
+          <div class="kpi-grid history-kpi-grid">
+            <div class="card kpi-card">
+              <span class="kpi-label">운동 완료</span>
+              <strong id="hist-kpi-count" class="kpi-value tabular">0회</strong>
+            </div>
+            <div class="card kpi-card">
+              <span class="kpi-label">누적 총 볼륨</span>
+              <strong id="hist-kpi-volume" class="kpi-value tabular text-blue">0 kg</strong>
+            </div>
+            <div class="card kpi-card">
+              <span class="kpi-label">회당 평균 볼륨</span>
+              <strong id="hist-kpi-avg" class="kpi-value tabular text-mint">0 kg</strong>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="chart-head">
+              <div>
+                <h2 class="chart-title">총 볼륨 성장 그래프</h2>
+                <p class="chart-sub">날짜별 완료 세트 총 무게 (워밍업 W 제외)</p>
+              </div>
+              <span id="volume-trend-badge" class="trend-badge neutral">데이터 대기</span>
+            </div>
+            <div id="chart-volume" class="chart-box"></div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="chart-head chart-head-stack">
+              <div>
+                <h2 class="chart-title">종목별 추정 1RM 성장</h2>
+                <p class="chart-sub">Epley 공식: 무게 × (1 + 횟수 ÷ 30)</p>
+              </div>
+              <div class="chart-controls-row">
+                <select id="select-1rm-exercise" class="dark-select" aria-label="1RM 조회 종목 선택"></select>
+                <span id="pr-badge" class="pr-badge tabular">PR 0 kg</span>
+              </div>
+            </div>
+            <div id="chart-1rm" class="chart-box"></div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="chart-head">
+              <div>
+                <h2 class="chart-title">부위별 자극 비중</h2>
+                <p class="chart-sub">가슴 · 등 · 하체 · 어깨 · 팔 · 코어</p>
+              </div>
+              <div class="segmented-control segmented-sm" role="group">
+                <button id="muscle-mode-sets" class="seg-btn active" type="button" data-muscle-mode="sets">세트 수</button>
+                <button id="muscle-mode-volume" class="seg-btn" type="button" data-muscle-mode="volume">볼륨</button>
+              </div>
+            </div>
+            <div id="chart-muscle" class="chart-box"></div>
+          </div>
+
+          <div class="card chart-card">
+            <h2 class="chart-title">날짜별 운동 일지</h2>
+            <div id="history-list" class="history-stack"></div>
+          </div>
+        </div>
+
+        <!-- 패널 B: 체중 · 인바디 추이 -->
+        <div id="hist-panel-inbody" class="exercises-stack hidden">
+          <div class="kpi-grid">
+            <div class="card kpi-card">
+              <span class="kpi-label">최근 체중</span>
+              <strong id="inbody-kpi-weight" class="kpi-value tabular">- kg</strong>
+              <span id="inbody-delta-weight" class="kpi-delta text-muted">-</span>
+            </div>
+            <div class="card kpi-card">
+              <span class="kpi-label">골격근량</span>
+              <strong id="inbody-kpi-muscle" class="kpi-value tabular text-mint">- kg</strong>
+              <span id="inbody-delta-muscle" class="kpi-delta text-muted">-</span>
+            </div>
+            <div class="card kpi-card">
+              <span class="kpi-label">체지방률</span>
+              <strong id="inbody-kpi-fat" class="kpi-value tabular text-amber">- %</strong>
+              <span id="inbody-delta-fat" class="kpi-delta text-muted">-</span>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <h2 class="chart-title">체중 추이 (kg)</h2>
+            <div id="chart-inbody-weight" class="chart-box"></div>
+          </div>
+
+          <div class="card chart-card">
+            <h2 class="chart-title">골격근량 추이 (kg)</h2>
+            <div id="chart-inbody-muscle" class="chart-box"></div>
+          </div>
+
+          <div class="card chart-card">
+            <h2 class="chart-title">체지방률 추이 (%)</h2>
+            <div id="chart-inbody-fat" class="chart-box"></div>
+          </div>
         </div>
       </section>
 
-      <!-- 4. 설정·동기화 탭 -->
-      <section id="view-settings" class="tab-view" aria-label="설정 및 구글 시트 동기화">
+      <!-- 5. 설정·동기화 탭 -->
+      <section id="view-settings" class="tab-view" aria-label="설정 및 계정 관리">
         <div class="view-header">
           <div>
-            <h1 class="view-title">설정 · 동기화</h1>
-            <p class="view-subtitle">구글 시트 연동으로 폰과 PC 기록을 자동으로 맞춰보세요.</p>
+            <h1 class="view-title">설정 · 계정</h1>
+            <p class="view-subtitle">사용자 전환, 화면 테마, 구글 시트 동기화를 관리합니다.</p>
           </div>
         </div>
 
-        <!-- 구글 시트 동기화 카드 -->
+        <!-- 현재 사용자 카드 -->
         <div class="card settings-card">
           <div class="settings-head">
             <div>
-              <h2 class="settings-title">구글 시트(Apps Script) 동기화</h2>
-              <p class="settings-desc">별도 서버나 유료 DB 없이 내 구글 스프레드시트에 바로 저장됩니다.</p>
+              <h2 class="settings-title">현재 로그인 사용자: <span id="settings-user-name" class="text-blue">-</span></h2>
+              <p id="settings-user-mode" class="settings-desc">구글 시트에 닉네임별로 분리 저장됩니다.</p>
             </div>
-            <span id="settings-sync-status" class="status-badge">미연결</span>
+            <button id="btn-switch-user" class="btn btn-secondary btn-sm" type="button">사용자 전환 / 로그아웃</button>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label" for="input-script-url">Apps Script 웹 앱 URL</label>
-            <input id="input-script-url" class="dark-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+        <!-- 화면 테마 설정 -->
+        <div class="card settings-card">
+          <div>
+            <h2 class="settings-title">화면 테마</h2>
+            <p class="settings-desc">원하는 밝기 모드를 선택하면 즉시 적용됩니다.</p>
           </div>
+          <div id="theme-selector" class="theme-grid">
+            <button class="theme-btn" type="button" data-theme-mode="dark">🌙 다크 모드</button>
+            <button class="theme-btn" type="button" data-theme-mode="light">☀️ 라이트 모드</button>
+            <button class="theme-btn" type="button" data-theme-mode="system">📱 시스템 설정</button>
+          </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label" for="input-script-secret">보안 키 (선택사항 · Code.gs와 동일하게 입력)</label>
-            <input id="input-script-secret" class="dark-input" type="password" placeholder="비워두면 키 없이 연결됩니다" autocomplete="off">
+        <!-- 구글 시트 자동 동기화 -->
+        <div class="card settings-card">
+          <div class="settings-head">
+            <div>
+              <h2 class="settings-title">구글 시트 자동 동기화</h2>
+              <p class="settings-desc">Apps Script 웹 앱 주소가 기본 내장되어 있어 별도 설정 없이 연동됩니다.</p>
+            </div>
+            <span id="settings-sync-status" class="status-badge">대기 중</span>
           </div>
 
           <div class="toggle-row">
             <div>
               <div class="toggle-title">자동 동기화</div>
-              <div class="toggle-sub">운동 저장 · 루틴 수정 · 앱 시작 시 자동으로 구글 시트와 동기화</div>
+              <div class="toggle-sub">운동·루틴·보충제·인바디 변경 시 자동으로 구글 시트에 저장</div>
             </div>
             <label class="switch">
               <input id="toggle-auto-sync" type="checkbox" checked>
@@ -278,9 +452,17 @@
           </div>
 
           <div id="sync-feedback" class="sync-feedback hidden"></div>
+
+          <details class="advanced-details">
+            <summary>고급: Apps Script 웹 앱 URL 직접 변경</summary>
+            <div class="advanced-details-body">
+              <input id="input-script-url" class="dark-input" type="url" autocomplete="off">
+              <button id="btn-reset-script-url" class="btn btn-ghost btn-xs" type="button">기본 내장 URL로 복원</button>
+            </div>
+          </details>
         </div>
 
-        <!-- 휴식 타이머 & 알림음 설정 -->
+        <!-- 휴식 타이머 & 알림음 -->
         <div class="card settings-card">
           <h2 class="settings-title">휴식 타이머 · 알림음</h2>
 
@@ -308,7 +490,7 @@
           <div class="toggle-row">
             <div>
               <div class="toggle-title">휴식 종료 알림음</div>
-              <div class="toggle-sub">타이머가 0초가 되면 알림음(2연음)으로 알려줍니다</div>
+              <div class="toggle-sub">타이머 종료 시 알림음(2연음)으로 알려줍니다</div>
             </div>
             <label class="switch">
               <input id="toggle-timer-sound" type="checkbox" checked>
@@ -321,19 +503,18 @@
 
         <!-- 아이폰 PWA & 데이터 관리 -->
         <div class="card settings-card">
-          <h2 class="settings-title">아이폰 앱 설치 & 데이터 관리</h2>
-
+          <h2 class="settings-title">아이폰 홈 화면 추가 & 데이터 백업</h2>
           <div class="pwa-tip-box">
             <strong>📱 아이폰 Safari '홈 화면에 추가' 안내</strong>
-            <p>배포된 주소를 Safari로 연 뒤, 하단 <strong>공유 버튼(□↑)</strong> → <strong>홈 화면에 추가</strong>를 누르면 전체 화면 다크 모드 앱처럼 실행됩니다.</p>
+            <p>Safari로 주소를 연 뒤 하단 <strong>공유 버튼(□↑)</strong> → <strong>홈 화면에 추가</strong>를 누르면 앱처럼 실행됩니다.</p>
           </div>
 
           <div class="data-actions-grid">
-            <button id="btn-export-json" class="btn btn-secondary" type="button">백업 파일 내보내기</button>
-            <button id="btn-import-json" class="btn btn-secondary" type="button">백업 파일 불러오기</button>
+            <button id="btn-export-json" class="btn btn-secondary" type="button">백업 내보내기</button>
+            <button id="btn-import-json" class="btn btn-secondary" type="button">백업 불러오기</button>
             <input id="input-import-file" type="file" accept="application/json" class="hidden">
-            <button id="btn-clear-demo" class="btn btn-ghost" type="button">샘플 기록만 지우기</button>
-            <button id="btn-reset-routines" class="btn btn-ghost" type="button">기본 루틴 4종 복원</button>
+            <button id="btn-clear-demo" class="btn btn-ghost" type="button">샘플 기록 지우기</button>
+            <button id="btn-reset-routines" class="btn btn-ghost" type="button">기본 루틴 복원</button>
           </div>
         </div>
       </section>
@@ -358,29 +539,35 @@
       </div>
     </div>
 
-    <!-- 하단 고정 네비게이션 탭 바 -->
+    <!-- 하단 5탭 네비게이션 -->
     <nav class="bottom-nav" aria-label="주 메뉴">
       <button class="nav-btn active" type="button" data-tab="workout">
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>
         </svg>
         <span>운동</span>
       </button>
       <button class="nav-btn" type="button" data-tab="routines">
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/>
         </svg>
         <span>루틴</span>
       </button>
+      <button class="nav-btn" type="button" data-tab="daily">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span>데일리</span>
+      </button>
       <button class="nav-btn" type="button" data-tab="history">
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 3v18h18"/><path d="M7 15l4-4 4 3 5-7"/>
         </svg>
         <span>기록·성장</span>
       </button>
       <button class="nav-btn" type="button" data-tab="settings">
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
         </svg>
         <span>설정</span>
@@ -396,14 +583,14 @@
         <button class="modal-close" type="button" data-close-modal="modal-exercise-picker" aria-label="닫기">✕</button>
       </div>
       <div class="modal-body">
-        <input id="picker-search-input" class="dark-input" type="search" placeholder="종목 검색 (예: 벤치, 스쿼트, 랫풀다운)">
+        <input id="picker-search-input" class="dark-input" type="search" placeholder="종목 검색 (예: 벤치, 풀업, 플랭크)">
         <div id="picker-muscle-chips" class="filter-chips compact-chips"></div>
         <div id="picker-list" class="picker-list"></div>
 
         <div class="custom-ex-box">
           <div class="custom-ex-title">찾는 종목이 없다면 직접 추가</div>
-          <div class="custom-ex-row">
-            <input id="custom-ex-name" class="dark-input" type="text" placeholder="종목명 입력">
+          <input id="custom-ex-name" class="dark-input" type="text" placeholder="종목명 입력">
+          <div class="custom-ex-grid">
             <select id="custom-ex-muscle" class="dark-select">
               <option value="가슴">가슴</option>
               <option value="등">등</option>
@@ -412,8 +599,13 @@
               <option value="팔">팔</option>
               <option value="코어">코어</option>
             </select>
-            <button id="btn-add-custom-ex" class="btn btn-primary btn-sm" type="button">추가</button>
+            <select id="custom-ex-tracking" class="dark-select">
+              <option value="weighted">중량 + 횟수</option>
+              <option value="bodyweight_reps">맨몸 · 횟수</option>
+              <option value="bodyweight_time">맨몸 · 시간(초)</option>
+            </select>
           </div>
+          <button id="btn-add-custom-ex" class="btn btn-primary btn-sm" type="button">직접 종목 추가</button>
         </div>
       </div>
     </div>
@@ -475,6 +667,81 @@
       <div class="modal-footer">
         <button id="btn-detail-delete" class="btn btn-danger-ghost" type="button">기록 삭제</button>
         <button id="btn-detail-repeat" class="btn btn-primary" type="button">이 구성으로 오늘 운동하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 4: 바벨 원판(플레이트) 계산기 -->
+  <div id="modal-plate-calculator" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="plate-calc-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 id="plate-calc-title" class="modal-title">바벨 원판 계산기</h3>
+          <p class="modal-subtitle">목표 무게를 입력하면 한쪽에 끼울 원판 조합을 계산합니다.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-modal="modal-plate-calculator" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row-2">
+          <label class="form-group">
+            <span class="form-label">목표 총 무게 (kg)</span>
+            <input id="plate-target-input" class="dark-input tabular" type="number" inputmode="decimal" step="2.5" min="20" max="400" value="100">
+          </label>
+          <label class="form-group">
+            <span class="form-label">빈 바벨 무게</span>
+            <select id="plate-bar-select" class="dark-select">
+              <option value="20" selected>표준 20 kg</option>
+              <option value="15">여자용 15 kg</option>
+              <option value="10">이지바 10 kg</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="quick-timer-btns" id="plate-quick-weights">
+          <button class="chip-btn" type="button" data-plate-w="60">60kg</button>
+          <button class="chip-btn" type="button" data-plate-w="80">80kg</button>
+          <button class="chip-btn" type="button" data-plate-w="100">100kg</button>
+          <button class="chip-btn" type="button" data-plate-w="120">120kg</button>
+          <button class="chip-btn" type="button" data-plate-w="140">140kg</button>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-title">25kg 원판 포함</div>
+            <div class="toggle-sub">헬스장에 25kg 빨간 원판이 있을 때 켜세요</div>
+          </div>
+          <label class="switch">
+            <input id="plate-include-25" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div id="plate-visual" class="plate-barbell-visual"></div>
+        <div id="plate-summary-list" class="plate-chips-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 5: 보충제 커스텀 추가 -->
+  <div id="modal-add-supplement" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="supp-modal-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="supp-modal-title" class="modal-title">보충제 항목 추가</h3>
+        <button class="modal-close" type="button" data-close-modal="modal-add-supplement" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="supp-name-input">보충제 / 영양제 이름</label>
+          <input id="supp-name-input" class="dark-input" type="text" placeholder="예: 아르기닌, 마그네슘, 부스터">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supp-time-input">복용 타이밍 메모 (선택)</label>
+          <input id="supp-time-input" class="dark-input" type="text" placeholder="예: 운동 30분 전, 취침 전">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" data-close-modal="modal-add-supplement">취소</button>
+        <button id="btn-save-supplement" class="btn btn-primary" type="button">추가하기</button>
       </div>
     </div>
   </div>

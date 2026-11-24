@@ -1,4 +1,10 @@
-import { MUSCLE_GROUPS, calcEst1RM, calcWorkoutStats, formatKoreanDate } from './data.js';
+import {
+  MUSCLE_GROUPS,
+  calcEst1RM,
+  calcWorkoutStats,
+  formatKoreanDate,
+  inferTrackingType
+} from './data.js';
 
 function shortDate(dateStr) {
   if (!dateStr) return '';
@@ -20,7 +26,6 @@ export function renderVolumeChart(container, workouts, trendBadgeEl) {
     return;
   }
 
-  // 날짜별 합산 (오름차순)
   const byDate = new Map();
   for (const w of workouts) {
     const vol = Number(w.totalVolume ?? calcWorkoutStats(w.exercises).totalVolume) || 0;
@@ -30,7 +35,6 @@ export function renderVolumeChart(container, workouts, trendBadgeEl) {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, volume]) => ({ date, volume: Math.round(volume) }));
 
-  // 추세 배지 계산
   if (trendBadgeEl) {
     if (points.length >= 2) {
       const first = points[0].volume;
@@ -90,31 +94,31 @@ export function renderVolumeChart(container, workouts, trendBadgeEl) {
     <svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="총 볼륨 성장 그래프">
       <defs>
         <linearGradient id="volAreaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.34"/>
+          <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.32"/>
           <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
         </linearGradient>
       </defs>
       ${yTicks
         .map(
           (t) => `
-          <line x1="${pad.left}" y1="${t.y}" x2="${width - pad.right}" y2="${t.y}" stroke="rgba(255,255,255,0.07)" stroke-dasharray="3 3"/>
-          <text x="${pad.left - 8}" y="${t.y + 4}" text-anchor="end" fill="#64748b" font-size="11">${t.label}</text>
+          <line x1="${pad.left}" y1="${t.y}" x2="${width - pad.right}" y2="${t.y}" stroke="var(--chart-grid)" stroke-dasharray="3 3"/>
+          <text x="${pad.left - 8}" y="${t.y + 4}" text-anchor="end" fill="var(--text-muted)" font-size="11">${t.label}</text>
         `
         )
         .join('')}
       ${areaPath ? `<path d="${areaPath}" fill="url(#volAreaGrad)"/>` : ''}
-      ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
       ${coords
         .map(
           (c, i) => `
-          <circle class="vol-point" data-idx="${i}" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${i === coords.length - 1 ? 5.5 : 4}" fill="#60A5FA" stroke="#0A0B0E" stroke-width="2" style="cursor:pointer"/>
+          <circle class="vol-point" data-idx="${i}" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${i === coords.length - 1 ? 5.5 : 4}" fill="var(--blue-bright)" stroke="var(--bg-card)" stroke-width="2" style="cursor:pointer"/>
         `
         )
         .join('')}
       ${xLabelIndices
         .map(
           (idx) => `
-          <text x="${coords[idx].x.toFixed(1)}" y="${height - 6}" text-anchor="middle" fill="#64748b" font-size="11">${shortDate(coords[idx].date)}</text>
+          <text x="${coords[idx].x.toFixed(1)}" y="${height - 6}" text-anchor="middle" fill="var(--text-muted)" font-size="11">${shortDate(coords[idx].date)}</text>
         `
         )
         .join('')}
@@ -146,9 +150,9 @@ export function render1RMChart(container, workouts, exerciseName, prBadgeEl) {
   const byDate = new Map();
   for (const w of workouts) {
     for (const ex of w.exercises || []) {
-      if (ex.name !== exerciseName) continue;
+      if (ex.name !== exerciseName || inferTrackingType(ex) === 'bodyweight_time') continue;
       for (const s of ex.sets || []) {
-        if (!s.completed) continue;
+        if (!s.completed || s.setType === 'warmup') continue;
         const rm = calcEst1RM(s.weight, s.reps);
         if (rm <= 0) continue;
         const prev = byDate.get(w.date);
@@ -161,7 +165,7 @@ export function render1RMChart(container, workouts, exerciseName, prBadgeEl) {
 
   const points = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
   if (!points.length) {
-    container.innerHTML = `<div class="chart-empty">"${exerciseName}"의 완료 세트 기록이 없습니다.</div>`;
+    container.innerHTML = `<div class="chart-empty">"${exerciseName}"의 중량 완료 기록이 없습니다.</div>`;
     if (prBadgeEl) prBadgeEl.textContent = 'PR 0 kg';
     return;
   }
@@ -211,24 +215,24 @@ export function render1RMChart(container, workouts, exerciseName, prBadgeEl) {
       ${yTicks
         .map(
           (t) => `
-          <line x1="${pad.left}" y1="${t.y}" x2="${width - pad.right}" y2="${t.y}" stroke="rgba(255,255,255,0.07)" stroke-dasharray="3 3"/>
-          <text x="${pad.left - 8}" y="${t.y + 4}" text-anchor="end" fill="#64748b" font-size="11">${t.label}</text>
+          <line x1="${pad.left}" y1="${t.y}" x2="${width - pad.right}" y2="${t.y}" stroke="var(--chart-grid)" stroke-dasharray="3 3"/>
+          <text x="${pad.left - 8}" y="${t.y + 4}" text-anchor="end" fill="var(--text-muted)" font-size="11">${t.label}</text>
         `
         )
         .join('')}
-      ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="#10B981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="var(--mint)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
       ${coords
         .map((c, i) => {
           const isPr = c.date === best.date && c.rm === best.rm;
           return `
-            <circle class="rm-point" data-idx="${i}" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${isPr ? 6 : 4}" fill="${isPr ? '#F59E0B' : '#10B981'}" stroke="#0A0B0E" stroke-width="2" style="cursor:pointer"/>
+            <circle class="rm-point" data-idx="${i}" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${isPr ? 6 : 4}" fill="${isPr ? 'var(--amber)' : 'var(--mint)'}" stroke="var(--bg-card)" stroke-width="2" style="cursor:pointer"/>
           `;
         })
         .join('')}
       ${xLabelIndices
         .map(
           (idx) => `
-          <text x="${coords[idx].x.toFixed(1)}" y="${height - 6}" text-anchor="middle" fill="#64748b" font-size="11">${shortDate(coords[idx].date)}</text>
+          <text x="${coords[idx].x.toFixed(1)}" y="${height - 6}" text-anchor="middle" fill="var(--text-muted)" font-size="11">${shortDate(coords[idx].date)}</text>
         `
         )
         .join('')}
@@ -301,10 +305,10 @@ export function renderMuscleChart(container, workouts, mode = 'sets') {
     <div class="muscle-viz-wrap">
       <div class="muscle-donut-wrap">
         <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="부위별 자극 비중 도넛 차트">
-          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="15"/>
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--chart-track)" stroke-width="15"/>
           ${segments}
-          <text x="${cx}" y="${cy - 3}" text-anchor="middle" fill="#F8FAFC" font-size="14" font-weight="800">${formatNum(grandTotal)}</text>
-          <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#94A3B8" font-size="10">총 ${unit}</text>
+          <text x="${cx}" y="${cy - 3}" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="800">${formatNum(grandTotal)}</text>
+          <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="var(--text-secondary)" font-size="10">총 ${unit}</text>
         </svg>
       </div>
       <div class="muscle-bars">
@@ -328,7 +332,106 @@ export function renderMuscleChart(container, workouts, mode = 'sets') {
   `;
 }
 
-export function renderCalendar(container, year, month, workoutDatesSet, selectedDate, todayStr, onSelectDate, onChangeMonth) {
+export function renderInBodyChart(container, records, metricKey, label, unit, color) {
+  const points = records
+    .filter((r) => Number.isFinite(Number(r[metricKey])) && Number(r[metricKey]) > 0)
+    .map((r) => ({ date: r.date, val: Number(r[metricKey]) }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!points.length) {
+    container.innerHTML = `<div class="chart-empty">${label} 기록이 쌓이면 추이 그래프가 표시됩니다.</div>`;
+    return;
+  }
+
+  const minVal = Math.min(...points.map((p) => p.val));
+  const maxVal = Math.max(...points.map((p) => p.val));
+  const span = Math.max(2, maxVal - minVal);
+  const yMin = Math.max(0, Math.floor((minVal - span * 0.25) * 10) / 10);
+  const yMax = Math.ceil((maxVal + span * 0.25) * 10) / 10;
+
+  const width = 500;
+  const height = 165;
+  const pad = { top: 16, right: 16, bottom: 26, left: 42 };
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
+
+  const coords = points.map((p, idx) => {
+    const x = points.length === 1 ? pad.left + innerW / 2 : pad.left + (idx / (points.length - 1)) * innerW;
+    const y = pad.top + innerH - ((p.val - yMin) / (yMax - yMin)) * innerH;
+    return { ...p, x, y };
+  });
+
+  const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
+  const yTicks = [0, 0.5, 1].map((r) => ({
+    y: pad.top + innerH - r * innerH,
+    label: (yMin + r * (yMax - yMin)).toFixed(1)
+  }));
+
+  const xLabelIndices =
+    coords.length <= 4
+      ? coords.map((_, i) => i)
+      : [0, Math.floor((coords.length - 1) / 2), coords.length - 1];
+
+  const latest = coords[coords.length - 1];
+
+  container.innerHTML = `
+    <div class="chart-tooltip-bar" data-role="ib-tooltip">
+      <span class="text-secondary">${formatKoreanDate(latest.date)}</span>
+      <strong class="tabular" style="color:${color}">${latest.val} ${unit}</strong>
+    </div>
+    <svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 추이 그래프">
+      ${yTicks
+        .map(
+          (t) => `
+          <line x1="${pad.left}" y1="${t.y}" x2="${width - pad.right}" y2="${t.y}" stroke="var(--chart-grid)" stroke-dasharray="3 3"/>
+          <text x="${pad.left - 8}" y="${t.y + 4}" text-anchor="end" fill="var(--text-muted)" font-size="11">${t.label}</text>
+        `
+        )
+        .join('')}
+      ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      ${coords
+        .map(
+          (c, i) => `
+          <circle class="ib-point" data-idx="${i}" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${i === coords.length - 1 ? 5.5 : 4}" fill="${color}" stroke="var(--bg-card)" stroke-width="2" style="cursor:pointer"/>
+        `
+        )
+        .join('')}
+      ${xLabelIndices
+        .map(
+          (idx) => `
+          <text x="${coords[idx].x.toFixed(1)}" y="${height - 6}" text-anchor="middle" fill="var(--text-muted)" font-size="11">${shortDate(coords[idx].date)}</text>
+        `
+        )
+        .join('')}
+    </svg>
+  `;
+
+  const tooltip = container.querySelector('[data-role="ib-tooltip"]');
+  container.querySelectorAll('.ib-point').forEach((dot) => {
+    const show = () => {
+      const p = coords[Number(dot.dataset.idx)];
+      if (!p || !tooltip) return;
+      tooltip.innerHTML = `
+        <span class="text-secondary">${formatKoreanDate(p.date)}</span>
+        <strong class="tabular" style="color:${color}">${p.val} ${unit}</strong>
+      `;
+    };
+    dot.addEventListener('click', show);
+    dot.addEventListener('mouseenter', show);
+  });
+}
+
+export function renderCalendar(
+  container,
+  year,
+  month,
+  workoutDatesSet,
+  supplementDatesSet,
+  selectedDate,
+  todayStr,
+  onSelectDate,
+  onChangeMonth
+) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -339,11 +442,19 @@ export function renderCalendar(container, year, month, workoutDatesSet, selected
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const hasW = workoutDatesSet.has(dateStr);
+    const hasS = supplementDatesSet.has(dateStr);
     const classes = ['cal-day'];
-    if (workoutDatesSet.has(dateStr)) classes.push('has-workout');
+    if (hasW) classes.push('has-workout');
     if (dateStr === todayStr) classes.push('today');
     if (dateStr === selectedDate) classes.push('selected');
-    cells.push(`<button type="button" class="${classes.join(' ')}" data-cal-date="${dateStr}">${d}</button>`);
+
+    const dots =
+      hasW || hasS
+        ? `<div class="cal-dots">${hasW ? '<i class="cal-dot-w"></i>' : ''}${hasS ? '<i class="cal-dot-s"></i>' : ''}</div>`
+        : '<div class="cal-dots"></div>';
+
+    cells.push(`<button type="button" class="${classes.join(' ')}" data-cal-date="${dateStr}"><span>${d}</span>${dots}</button>`);
   }
 
   container.innerHTML = `

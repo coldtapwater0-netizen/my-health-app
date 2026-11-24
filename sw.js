@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleekfit-cache-v1';
+const CACHE_NAME = 'fleekfit-cache-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -38,7 +38,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Google Apps Script API 요청은 절대 캐싱하지 않고 네트워크 직통
   if (
     url.hostname.includes('script.google.com') ||
     url.hostname.includes('script.googleusercontent.com')
@@ -46,10 +45,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // GET 요청만 처리
   if (event.request.method !== 'GET') return;
 
-  // 동일 출처 정적 리소스: Network-first with cache fallback
   if (url.origin === self.location.origin) {
     event.respondWith(
       fetch(event.request)
