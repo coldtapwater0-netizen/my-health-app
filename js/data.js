@@ -1,3 +1,5 @@
+export const DEFAULT_APP_URL = 'https://my-health-app-dun.vercel.app/';
+
 export const DEFAULT_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzfh4DFNxuYE2pDVVVO8aknRZqkHBEyBlTcRzCH3C51_ysZghtcKWaEqajVsrhZxtIW/exec';
 

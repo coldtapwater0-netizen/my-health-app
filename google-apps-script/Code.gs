@@ -1,5 +1,5 @@
 /**
- * 플릭핏(FleekFit) v2 멀티유저 Google Sheets 동기화용 Apps Script 코드
+ * 데이핏(DayFit) v2 멀티유저 Google Sheets 동기화용 Apps Script 코드
  *
  * 업데이트/재배포 방법:
  * 1. 내 구글 시트 -> [확장 프로그램] -> [Apps Script] 열기
@@ -26,7 +26,7 @@ function doGet(e) {
       return jsonResponse_({
         ok: true,
         version: 2,
-        message: "플릭핏 v2 멀티유저 구글 시트 연결이 정상입니다.",
+        message: "데이핏(DayFit) v2 멀티유저 구글 시트 연결이 정상입니다.",
         serverTime: new Date().toISOString()
       });
     }

@@ -1,23 +1,23 @@
 :root {
-  --bg: #0a0b0e;
-  --bg-card: #12141a;
-  --bg-card-grad: linear-gradient(180deg, #161923 0%, #12141a 100%);
-  --bg-elevated: #1a1d26;
-  --bg-input: #141720;
-  --bg-glass: rgba(10, 11, 14, 0.86);
-  --bg-nav: rgba(12, 14, 19, 0.9);
-  --bg-timer: rgba(22, 26, 36, 0.95);
-  --bg-toast: rgba(24, 29, 40, 0.96);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --chart-grid: rgba(255, 255, 255, 0.07);
-  --chart-track: rgba(255, 255, 255, 0.06);
+  --bg: #0f131a;
+  --bg-card: #171c26;
+  --bg-card-grad: linear-gradient(180deg, #1d2433 0%, #171c26 100%);
+  --bg-elevated: #202736;
+  --bg-input: #1a202c;
+  --bg-glass: rgba(15, 19, 26, 0.86);
+  --bg-nav: rgba(20, 25, 35, 0.92);
+  --bg-timer: rgba(25, 31, 44, 0.95);
+  --bg-toast: rgba(24, 30, 42, 0.96);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-track: rgba(255, 255, 255, 0.07);
   --text: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --blue: #3b82f6;
   --blue-bright: #60a5fa;
-  --blue-soft: rgba(59, 130, 246, 0.15);
+  --blue-soft: rgba(59, 130, 246, 0.16);
   --mint: #10b981;
   --mint-soft: rgba(16, 185, 129, 0.16);
   --amber: #f59e0b;
@@ -36,34 +36,34 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #f3f5f9;
+  --bg: #f4f7fb;
   --bg-card: #ffffff;
-  --bg-card-grad: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  --bg-elevated: #eef2f7;
-  --bg-input: #f8fafc;
-  --bg-glass: rgba(243, 245, 249, 0.88);
-  --bg-nav: rgba(255, 255, 255, 0.92);
-  --bg-timer: rgba(255, 255, 255, 0.96);
+  --bg-card-grad: linear-gradient(180deg, #eff7ff 0%, #ffffff 100%);
+  --bg-elevated: #edf3fa;
+  --bg-input: #f8fafd;
+  --bg-glass: rgba(244, 247, 251, 0.9);
+  --bg-nav: rgba(255, 255, 255, 0.94);
+  --bg-timer: rgba(255, 255, 255, 0.97);
   --bg-toast: rgba(15, 23, 42, 0.94);
-  --border: rgba(15, 23, 42, 0.09);
-  --border-strong: rgba(15, 23, 42, 0.16);
+  --border: rgba(37, 99, 235, 0.10);
+  --border-strong: rgba(37, 99, 235, 0.18);
   --chart-grid: rgba(15, 23, 42, 0.08);
-  --chart-track: rgba(15, 23, 42, 0.08);
+  --chart-track: rgba(37, 99, 235, 0.09);
   --text: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
   --blue: #2563eb;
-  --blue-bright: #2563eb;
-  --blue-soft: rgba(37, 99, 235, 0.11);
+  --blue-bright: #0284c7;
+  --blue-soft: rgba(14, 165, 233, 0.13);
   --mint: #059669;
-  --mint-soft: rgba(5, 150, 105, 0.12);
+  --mint-soft: rgba(16, 185, 129, 0.14);
   --amber: #d97706;
-  --amber-soft: rgba(217, 119, 6, 0.14);
+  --amber-soft: rgba(245, 158, 11, 0.15);
   --purple: #7c3aed;
   --purple-soft: rgba(124, 58, 237, 0.12);
   --red: #dc2626;
   --red-soft: rgba(220, 38, 38, 0.1);
-  --shadow-card: 0 2px 10px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 4px 18px rgba(15, 23, 42, 0.05);
   color-scheme: light;
 }
 
@@ -136,14 +136,14 @@ body {
 }
 
 .auth-logo-lg {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #3b82f6, #10b981);
+  background: linear-gradient(135deg, #38bdf8, #2563eb, #14b8a6);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.28);
 }
 
 .auth-title {
@@ -245,9 +245,9 @@ body {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #3b82f6, #10b981);
+  background: linear-gradient(135deg, #38bdf8, #2563eb, #14b8a6);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 
 .brand-title-row {
@@ -1457,4 +1457,142 @@ body {
 @keyframes fadeSlide {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== PWA 자동 설치 배너 & QR 공유 ===== */
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 14px 0;
+  padding: 11px 13px;
+  background: var(--blue-soft);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 14px;
+}
+
+.install-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.install-banner-text strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.install-banner-text span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.install-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.qr-card-white {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  width: 262px;
+  min-height: 262px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.qr-img {
+  display: block;
+  width: 230px;
+  height: 230px;
+  object-fit: contain;
+}
+
+.qr-fallback {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  padding: 12px;
+}
+
+.qr-url-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-bright);
+  text-align: center;
+  word-break: break-all;
+}
+
+.inapp-warn-box {
+  background: var(--amber-soft);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.inapp-warn-box strong {
+  display: block;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+
+.inapp-warn-box p {
+  margin: 0;
+  color: var(--text);
+}
+
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.install-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 12px;
+}
+
+.install-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.install-step-item strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.install-step-item p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }

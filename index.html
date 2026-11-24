@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta id="meta-theme-color" name="theme-color" content="#0A0B0E">
-  <meta name="description" content="플릭핏(FleekFit) — 멀티유저 다크/라이트 개인 헬스 일지 & 구글 시트 동기화 PWA">
+  <meta id="meta-theme-color" name="theme-color" content="#F4F7FB">
+  <meta name="description" content="데이핏(DayFit) — 매일 기록하는 개인 헬스 일지 & 구글 시트 동기화 PWA">
 
   <!-- iOS Safari PWA 홈 화면 추가 설정 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="플릭핏">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="데이핏">
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
   <link rel="manifest" href="./manifest.json">
 
-  <title>플릭핏 — 개인 헬스 일지</title>
+  <title>데이핏 (DayFit) — 오늘의 운동일지</title>
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -30,7 +30,7 @@
             <path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>
           </svg>
         </div>
-        <h1 class="auth-title">플릭핏 (FleekFit)</h1>
+        <h1 class="auth-title">데이핏 (DayFit)</h1>
         <p class="auth-sub">내 구글 시트에 자동 저장되는 나만의 운동 · 보충제 · 인바디 일지</p>
       </div>
 
@@ -59,6 +59,10 @@
       <button id="btn-auth-demo" class="btn btn-secondary btn-block" type="button">
         구글 시트 없이 체험 모드로 먼저 둘러보기
       </button>
+
+      <button id="btn-auth-qr" class="btn btn-ghost btn-sm" type="button">
+        📱 QR코드로 폰에서 바로 열기
+      </button>
     </div>
   </section>
 
@@ -74,10 +78,10 @@
         </div>
         <div>
           <div class="brand-title-row">
-            <span class="brand-name">플릭핏</span>
+            <span class="brand-name">데이핏</span>
             <span id="user-badge" class="user-chip">사용자</span>
           </div>
-          <span class="brand-tag">FLEEK LOG</span>
+          <span class="brand-tag">DAYFIT</span>
         </div>
       </div>
 
@@ -91,6 +95,18 @@
         </button>
       </div>
     </header>
+
+    <!-- 자동 PWA 홈 화면 설치 배너 -->
+    <div id="pwa-install-banner" class="install-banner hidden" role="region" aria-label="앱 설치 안내">
+      <div class="install-banner-text">
+        <strong id="install-banner-title">📲 홈 화면에 추가해 앱처럼 쓰세요</strong>
+        <span id="install-banner-desc">카메라 QR 접속 후 3초 만에 전체 화면 앱으로 설치할 수 있습니다.</span>
+      </div>
+      <div class="install-banner-actions">
+        <button id="btn-banner-install" class="btn btn-primary btn-xs" type="button">설치 방법</button>
+        <button id="btn-banner-dismiss" class="modal-close" type="button" aria-label="배너 닫기">✕</button>
+      </div>
+    </div>
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
@@ -503,10 +519,15 @@
 
         <!-- 아이폰 PWA & 데이터 관리 -->
         <div class="card settings-card">
-          <h2 class="settings-title">아이폰 홈 화면 추가 & 데이터 백업</h2>
+          <h2 class="settings-title">QR 공유 · 홈 화면 추가 & 데이터 백업</h2>
           <div class="pwa-tip-box">
             <strong>📱 아이폰 Safari '홈 화면에 추가' 안내</strong>
-            <p>Safari로 주소를 연 뒤 하단 <strong>공유 버튼(□↑)</strong> → <strong>홈 화면에 추가</strong>를 누르면 앱처럼 실행됩니다.</p>
+            <p>QR코드로 접속한 뒤 Safari 하단 <strong>공유 버튼(□↑)</strong> → <strong>홈 화면에 추가</strong>를 누르면 앱처럼 실행됩니다.</p>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-open-qr-share" class="btn btn-primary" type="button">📱 QR코드로 공유</button>
+            <button id="btn-open-install-guide" class="btn btn-secondary" type="button">📲 설치 가이드</button>
           </div>
 
           <div class="data-actions-grid">
@@ -742,6 +763,85 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" type="button" data-close-modal="modal-add-supplement">취소</button>
         <button id="btn-save-supplement" class="btn btn-primary" type="button">추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 6: QR코드 앱 공유 -->
+  <div id="modal-qr-share" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 id="qr-modal-title" class="modal-title">QR코드로 데이핏 열기</h3>
+          <p class="modal-subtitle">휴대폰 기본 카메라로 아래 QR코드를 찍어 바로 접속하세요.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-modal="modal-qr-share" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="qr-card-white">
+          <img id="qr-code-img" class="qr-img" width="230" height="230" alt="데이핏 접속 QR코드">
+          <div id="qr-img-fallback" class="qr-fallback hidden">오프라인 상태입니다. 아래 주소를 복사해 Safari에서 열어 주세요.</div>
+        </div>
+
+        <div id="qr-share-url-text" class="qr-url-box tabular"></div>
+
+        <div class="btn-row">
+          <button id="btn-copy-share-url" class="btn btn-secondary" type="button">📋 링크 복사</button>
+          <button id="btn-native-share" class="btn btn-primary" type="button">📤 공유하기</button>
+        </div>
+
+        <div class="pwa-tip-box">
+          <strong>💡 홈 화면에 추가하는 팁</strong>
+          <p>• <strong>아이폰</strong>: 카메라로 찍어 <strong>Safari</strong>로 연 뒤 하단 <strong>공유(□↑) → 홈 화면에 추가</strong><br>
+             • <strong>갤럭시</strong>: Chrome으로 열리면 <strong>홈 화면에 추가 / 앱 설치</strong> 버튼 탭</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 7: 홈 화면(PWA) 설치 가이드 -->
+  <div id="modal-install-guide" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="install-modal-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 id="install-modal-title" class="modal-title">홈 화면에 앱처럼 추가하기</h3>
+          <p class="modal-subtitle">주소창 없이 전체 화면 다크/라이트 앱으로 실행됩니다.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-modal="modal-install-guide" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="inapp-browser-warning" class="inapp-warn-box hidden">
+          <strong>⚠️ 카카오톡 / 인스타 내 브라우저로 열렸습니다</strong>
+          <p>인앱 브라우저에서는 홈 화면 추가가 안 됩니다. 오른쪽 위/아래 <strong>⋮ 또는 공유 버튼</strong>을 눌러 <strong>Safari(또는 다른 브라우저)로 열기</strong>를 먼저 눌러 주세요!</p>
+        </div>
+
+        <button id="btn-android-install" class="btn btn-primary btn-block hidden" type="button">
+          📲 지금 바로 홈 화면에 앱 설치하기
+        </button>
+
+        <div class="install-steps">
+          <div class="install-step-item">
+            <span class="install-step-num">1</span>
+            <div>
+              <strong>아이폰 Safari 하단 공유 버튼(□↑) 누르기</strong>
+              <p>화면 맨 아래 가운데에 있는 네모 위 화살표 아이콘을 탭하세요.</p>
+            </div>
+          </div>
+          <div class="install-step-item">
+            <span class="install-step-num">2</span>
+            <div>
+              <strong>'홈 화면에 추가' 선택하기</strong>
+              <p>메뉴를 위로 살짝 올려 <strong>[+] 홈 화면에 추가</strong>를 눌러 주세요.</p>
+            </div>
+          </div>
+          <div class="install-step-item">
+            <span class="install-step-num">3</span>
+            <div>
+              <strong>오른쪽 위 '추가' 누르면 완료!</strong>
+              <p>아이폰 바탕화면에 데이핏 아이콘이 생기고, 앱 안에서 본인 닉네임으로 로그인할 수 있습니다.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -16,7 +16,8 @@ const GLOBAL_KEYS = {
 };
 
 export const DEFAULT_SETTINGS = {
-  theme: 'dark', // 'dark' | 'light' | 'system'
+  theme: 'light', // 'dark' | 'light' | 'system'
+  themeMigratedDayFit: false,
   scriptUrl: DEFAULT_SCRIPT_URL,
   autoSync: true,
   defaultRestSec: 90,
@@ -63,11 +64,18 @@ export function clearSession() {
 
 export function getSettings() {
   const saved = readJSON(GLOBAL_KEYS.SETTINGS, {});
-  return {
+  const merged = {
     ...DEFAULT_SETTINGS,
     ...saved,
     scriptUrl: saved.scriptUrl || DEFAULT_SCRIPT_URL
   };
+  // 데이핏(DayFit) 밝은 테마 리뉴얼 시 1회성으로 라이트 모드로 전환
+  if (!merged.themeMigratedDayFit) {
+    merged.theme = 'light';
+    merged.themeMigratedDayFit = true;
+    writeJSON(GLOBAL_KEYS.SETTINGS, merged);
+  }
+  return merged;
 }
 
 export function saveSettings(partial) {

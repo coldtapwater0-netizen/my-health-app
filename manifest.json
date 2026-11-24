@@ -1,13 +1,13 @@
 {
-  "name": "플릭핏 - 다크 운동일지",
-  "short_name": "플릭핏",
-  "description": "플릭 스타일 다크 모드 운동일지 & 구글 시트 동기화 PWA",
+  "name": "데이핏 (DayFit) - 오늘의 운동일지",
+  "short_name": "데이핏",
+  "description": "데이핏(DayFit) — 매일 기록하는 개인 헬스 일지 & 구글 시트 동기화 PWA",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0A0B0E",
-  "theme_color": "#0A0B0E",
+  "background_color": "#F4F7FB",
+  "theme_color": "#F4F7FB",
   "lang": "ko",
   "icons": [
     {

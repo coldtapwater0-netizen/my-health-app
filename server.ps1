@@ -20,7 +20,7 @@ $mimeTypes = @{
 
 $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
 $listener.Start()
-Write-Host "FleekFit local server running at http://127.0.0.1:$Port"
+Write-Host "DayFit local server running at http://127.0.0.1:$Port"
 
 try {
   while ($true) {

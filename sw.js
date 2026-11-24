@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleekfit-cache-v2';
+const CACHE_NAME = 'dayfit-cache-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',

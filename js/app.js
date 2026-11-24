@@ -1,4 +1,5 @@
 import {
+  DEFAULT_APP_URL,
   DEFAULT_ROUTINES,
   DEFAULT_SCRIPT_URL,
   MUSCLE_GROUPS,
@@ -105,7 +106,8 @@ const state = {
   pickerMuscle: '전체',
   editingRoutine: null,
   viewingWorkoutId: null,
-  isSyncing: false
+  isSyncing: false,
+  deferredInstallPrompt: null
 };
 
 const restTimer = new RestTimer({
@@ -130,7 +132,7 @@ function applyTheme(mode) {
   const resolved = resolveTheme(mode);
   document.documentElement.dataset.theme = resolved;
   const meta = document.getElementById('meta-theme-color');
-  if (meta) meta.setAttribute('content', resolved === 'light' ? '#F3F5F9' : '#0A0B0E');
+  if (meta) meta.setAttribute('content', resolved === 'light' ? '#F4F7FB' : '#0F131A');
 
   document.querySelectorAll('#theme-selector .theme-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.themeMode === mode);
@@ -150,6 +152,7 @@ function bootstrap() {
   }
 
   bindEvents();
+  initPwaInstallHelper();
   startElapsedClock();
   registerServiceWorker();
 
@@ -1819,7 +1822,7 @@ function bindEvents() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fleekfit-${state.session?.nickname || 'backup'}-${toLocalDateStr()}.json`;
+    a.download = `dayfit-${state.session?.nickname || 'backup'}-${toLocalDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('백업 JSON 파일을 다운로드했습니다.', 'success');
@@ -1850,6 +1853,166 @@ function bindEvents() {
     renderAll();
     showToast('기본 분할 루틴 4종을 복원했습니다.', 'success');
   });
+
+  // QR코드 공유 & PWA 홈 화면 설치
+  document.getElementById('btn-auth-qr').addEventListener('click', openQrShareModal);
+  document.getElementById('btn-open-qr-share').addEventListener('click', openQrShareModal);
+  document.getElementById('btn-open-install-guide').addEventListener('click', openInstallGuideModal);
+  document.getElementById('btn-copy-share-url').addEventListener('click', copyShareUrl);
+  document.getElementById('btn-native-share').addEventListener('click', nativeShareUrl);
+
+  document.getElementById('btn-banner-install').addEventListener('click', () => {
+    if (state.deferredInstallPrompt) triggerAndroidInstall();
+    else openInstallGuideModal();
+  });
+  document.getElementById('btn-banner-dismiss').addEventListener('click', () => {
+    localStorage.setItem('fleekfit_banner_dismissed_at', String(Date.now()));
+    document.getElementById('pwa-install-banner').classList.add('hidden');
+  });
+  document.getElementById('btn-android-install').addEventListener('click', triggerAndroidInstall);
+}
+
+// ===== QR코드 공유 & 홈 화면 설치 도우미 =====
+function getShareAppUrl() {
+  const { protocol, origin, pathname } = window.location;
+  if (protocol === 'https:') {
+    return `${origin}${pathname}`;
+  }
+  return DEFAULT_APP_URL;
+}
+
+function openQrShareModal() {
+  const url = getShareAppUrl();
+  const imgEl = document.getElementById('qr-code-img');
+  const fallbackEl = document.getElementById('qr-img-fallback');
+  const urlBox = document.getElementById('qr-share-url-text');
+
+  urlBox.textContent = url;
+  fallbackEl.classList.add('hidden');
+  imgEl.classList.remove('hidden');
+
+  const encoded = encodeURIComponent(url);
+  imgEl.dataset.fallbackStep = '0';
+  imgEl.onerror = () => {
+    if (imgEl.dataset.fallbackStep === '0') {
+      imgEl.dataset.fallbackStep = '1';
+      imgEl.src = `https://quickchart.io/qr?size=260&margin=2&ecLevel=M&text=${encoded}`;
+    } else {
+      imgEl.classList.add('hidden');
+      fallbackEl.classList.remove('hidden');
+    }
+  };
+  imgEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&ecc=M&data=${encoded}`;
+  openModal('modal-qr-share');
+}
+
+async function copyShareUrl() {
+  const url = getShareAppUrl();
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('앱 주소가 복사되었습니다!', 'success');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('앱 주소가 복사되었습니다!', 'success');
+  }
+}
+
+async function nativeShareUrl() {
+  const url = getShareAppUrl();
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: '데이핏 (DayFit) — 오늘의 운동일지',
+        text: 'QR코드나 링크로 접속해 홈 화면에 추가해 보세요!',
+        url
+      });
+      return;
+    } catch {
+      // 사용자가 공유 취소 시 무시
+      return;
+    }
+  }
+  await copyShareUrl();
+}
+
+function getEnvInfo() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isInAppBrowser = /KAKAOTALK|Instagram|FBAN|FBAV|Line|NAVER/i.test(ua);
+  const isStandalone =
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    window.navigator.standalone === true;
+  return { isIOS, isAndroid, isInAppBrowser, isStandalone };
+}
+
+function initPwaInstallHelper() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+    document.getElementById('btn-android-install')?.classList.remove('hidden');
+    const bannerBtn = document.getElementById('btn-banner-install');
+    if (bannerBtn) bannerBtn.textContent = '바로 설치';
+    updateInstallBannerVisibility();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    state.deferredInstallPrompt = null;
+    document.getElementById('pwa-install-banner')?.classList.add('hidden');
+    showToast('홈 화면에 데이핏이 설치되었습니다!', 'success');
+  });
+
+  updateInstallBannerVisibility();
+}
+
+function updateInstallBannerVisibility() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (!banner) return;
+
+  const { isIOS, isAndroid, isInAppBrowser, isStandalone } = getEnvInfo();
+  if (isStandalone) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  const dismissedAt = Number(localStorage.getItem('fleekfit_banner_dismissed_at') || 0);
+  if (dismissedAt && Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  if (isInAppBrowser) {
+    document.getElementById('install-banner-title').textContent = '⚠️ Safari / 외부 브라우저로 열어주세요';
+    document.getElementById('install-banner-desc').textContent = '카톡·인스타 브라우저에서는 홈 화면 추가가 안 됩니다.';
+    banner.classList.remove('hidden');
+    return;
+  }
+
+  if (isIOS || isAndroid || state.deferredInstallPrompt) {
+    banner.classList.remove('hidden');
+  }
+}
+
+function openInstallGuideModal() {
+  const { isInAppBrowser } = getEnvInfo();
+  document.getElementById('inapp-browser-warning')?.classList.toggle('hidden', !isInAppBrowser);
+  document.getElementById('btn-android-install')?.classList.toggle('hidden', !state.deferredInstallPrompt);
+  openModal('modal-install-guide');
+}
+
+async function triggerAndroidInstall() {
+  if (!state.deferredInstallPrompt) return openInstallGuideModal();
+  state.deferredInstallPrompt.prompt();
+  const choice = await state.deferredInstallPrompt.userChoice;
+  if (choice?.outcome === 'accepted') {
+    state.deferredInstallPrompt = null;
+    closeModal('modal-install-guide');
+  }
 }
 
 bootstrap();
