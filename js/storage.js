@@ -445,13 +445,39 @@ export function createEmptyDraft() {
     title: '오늘의 운동',
     date: toLocalDateStr(),
     routineId: null,
-    startedAt: Date.now(),
+    startedAt: null,
+    elapsedSec: 0,
+    timerRunning: false,
     exercises: []
   };
 }
 
 export function getDraft() {
-  return readJSON(userKey('draft'), null) || createEmptyDraft();
+  const raw = readJSON(userKey('draft'), null);
+  if (!raw) return createEmptyDraft();
+
+  // 구버전 초안(timerRunning 없음)이거나 완료 세트 없이 8시간 이상 방치된 타이머는 00:00 정지 상태로 정리
+  const hasCompleted = (raw.exercises || []).some((ex) => (ex.sets || []).some((s) => s.completed));
+  const legacyAgeSec = raw.startedAt ? Math.floor((Date.now() - raw.startedAt) / 1000) : 0;
+  const isLegacyUntracked = typeof raw.timerRunning !== 'boolean';
+  if (isLegacyUntracked || (!hasCompleted && raw.timerRunning && legacyAgeSec > 8 * 3600)) {
+    const cleaned = {
+      ...raw,
+      date: !hasCompleted ? toLocalDateStr() : (raw.date || toLocalDateStr()),
+      startedAt: null,
+      elapsedSec: 0,
+      timerRunning: false
+    };
+    writeJSON(userKey('draft'), cleaned);
+    return cleaned;
+  }
+
+  return {
+    ...raw,
+    startedAt: raw.startedAt || null,
+    elapsedSec: Number(raw.elapsedSec) || 0,
+    timerRunning: Boolean(raw.timerRunning)
+  };
 }
 
 export function saveDraft(draft) {

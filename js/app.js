@@ -59,7 +59,7 @@ import {
   upsertSupplementItem,
   upsertWorkout
 } from './storage.js';
-import { RestTimer, formatMMSS } from './timer.js';
+import { RestTimer, formatDuration, formatMMSS } from './timer.js';
 import {
   loginUser,
   registerUser,
@@ -107,7 +107,9 @@ const state = {
   editingRoutine: null,
   viewingWorkoutId: null,
   isSyncing: false,
-  deferredInstallPrompt: null
+  deferredInstallPrompt: null,
+  modalZIndex: 65,
+  customRestTarget: null
 };
 
 const restTimer = new RestTimer({
@@ -214,7 +216,10 @@ function showToast(message, type = 'info') {
 }
 
 function openModal(id) {
-  document.getElementById(id)?.classList.remove('hidden');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.zIndex = String(++state.modalZIndex);
+  el.classList.remove('hidden');
 }
 
 function closeModal(id) {
@@ -255,9 +260,64 @@ function buildDraftFromRoutine(routine) {
     title: routine.name,
     date: toLocalDateStr(),
     routineId: routine.id,
-    startedAt: Date.now(),
+    startedAt: null,
+    elapsedSec: 0,
+    timerRunning: false,
     exercises
   };
+}
+
+// ===== 운동 경과 스톱워치 =====
+function getDraftElapsedSec(draft = state.draft) {
+  if (!draft) return 0;
+  const base = Number(draft.elapsedSec) || 0;
+  if (draft.timerRunning && draft.startedAt) {
+    return base + Math.max(0, Math.floor((Date.now() - draft.startedAt) / 1000));
+  }
+  return base;
+}
+
+function renderWorkoutTimerUI() {
+  const el = document.getElementById('workout-elapsed');
+  const toggleBtn = document.getElementById('btn-toggle-workout-timer');
+  if (!state.draft) return;
+
+  const sec = getDraftElapsedSec(state.draft);
+  if (el) el.textContent = formatDuration(sec);
+  if (toggleBtn) {
+    const running = Boolean(state.draft.timerRunning);
+    toggleBtn.classList.toggle('running', running);
+    toggleBtn.textContent = running ? '⏸ 정지' : sec > 0 ? '▶ 재개' : '▶ 시작';
+  }
+}
+
+function startWorkoutTimer({ silent = false } = {}) {
+  if (!state.draft || state.draft.timerRunning) return;
+  state.draft.startedAt = Date.now();
+  state.draft.timerRunning = true;
+  saveDraft(state.draft);
+  renderWorkoutTimerUI();
+  if (!silent) showToast('운동 시간 측정을 시작했습니다.');
+}
+
+function pauseWorkoutTimer() {
+  if (!state.draft || !state.draft.timerRunning) return;
+  state.draft.elapsedSec = getDraftElapsedSec(state.draft);
+  state.draft.startedAt = null;
+  state.draft.timerRunning = false;
+  saveDraft(state.draft);
+  renderWorkoutTimerUI();
+  showToast('운동 시간을 일시정지했습니다.');
+}
+
+function resetWorkoutTimer() {
+  if (!state.draft) return;
+  state.draft.startedAt = null;
+  state.draft.elapsedSec = 0;
+  state.draft.timerRunning = false;
+  saveDraft(state.draft);
+  renderWorkoutTimerUI();
+  showToast('운동 시간을 00:00으로 초기화했습니다.');
 }
 
 // ===== 전체 렌더링 =====
@@ -391,6 +451,7 @@ function renderWorkoutView() {
   document.getElementById('workout-title-input').value = draft.title || '';
   document.getElementById('workout-date-input').value = draft.date || toLocalDateStr();
   updateWorkoutSummaryDOM();
+  renderWorkoutTimerUI();
 
   const prMap = buildExercisePRMap(getActiveWorkouts(), draft.id);
   const listEl = document.getElementById('workout-exercises-list');
@@ -448,9 +509,14 @@ function renderWorkoutView() {
               </div>
               <div class="exercise-head-actions">
                 <select class="rest-mini-select" data-action="change-ex-rest" data-ex-idx="${exIdx}" aria-label="종목 휴식 시간">
-                  ${[60, 90, 120, 150, 180]
-                    .map((sec) => `<option value="${sec}" ${Number(ex.restSec) === sec ? 'selected' : ''}>휴식 ${sec}초</option>`)
-                    .join('')}
+                  ${(() => {
+                    const presets = [30, 45, 60, 90, 120, 150, 180];
+                    const cur = Number(ex.restSec) || state.settings.defaultRestSec || 90;
+                    const opts = presets.includes(cur) ? presets : [...presets, cur].sort((a, b) => a - b);
+                    return opts
+                      .map((sec) => `<option value="${sec}" ${cur === sec ? 'selected' : ''}>휴식 ${sec}초</option>`)
+                      .join('') + '<option value="custom">직접 입력...</option>';
+                  })()}
                 </select>
                 <button class="icon-btn" type="button" data-action="remove-ex" data-ex-idx="${exIdx}" title="종목 삭제">✕</button>
               </div>
@@ -897,6 +963,10 @@ function renderSettingsView() {
   document.querySelectorAll('#default-rest-group .preset-btn').forEach((btn) => {
     btn.classList.toggle('active', Number(btn.dataset.rest) === Number(s.defaultRestSec));
   });
+  const customDefaultInput = document.getElementById('input-custom-default-rest');
+  if (customDefaultInput) {
+    customDefaultInput.value = s.defaultRestSec || 90;
+  }
   applyTheme(s.theme);
 }
 
@@ -1199,14 +1269,12 @@ function triggerAutoSync() {
 }
 
 function startElapsedClock() {
-  const update = () => {
-    const el = document.getElementById('workout-elapsed');
-    if (!el || !state.draft) return;
-    const sec = Math.max(0, Math.floor((Date.now() - (state.draft.startedAt || Date.now())) / 1000));
-    el.textContent = formatMMSS(sec);
-  };
-  update();
-  window.setInterval(update, 1000);
+  renderWorkoutTimerUI();
+  window.setInterval(() => {
+    if (state.draft?.timerRunning) {
+      renderWorkoutTimerUI();
+    }
+  }, 1000);
 }
 
 function switchTab(tab) {
@@ -1357,7 +1425,7 @@ function bindEvents() {
       showToast('최소 1세트 이상 완료(✓) 체크 후 저장해 주세요.', 'error');
       return;
     }
-    const durationSec = Math.max(60, Math.floor((Date.now() - (state.draft.startedAt || Date.now())) / 1000));
+    const durationSec = Math.max(0, getDraftElapsedSec(state.draft));
     const finished = {
       id: state.draft.id || uid('w'),
       date: state.draft.date || toLocalDateStr(),
@@ -1379,9 +1447,48 @@ function bindEvents() {
     triggerAutoSync();
   });
 
+  // 운동 경과 스톱워치 제어
+  document.getElementById('btn-toggle-workout-timer').addEventListener('click', () => {
+    if (state.draft?.timerRunning) pauseWorkoutTimer();
+    else startWorkoutTimer();
+  });
+  document.getElementById('btn-reset-workout-timer').addEventListener('click', () => {
+    resetWorkoutTimer();
+  });
+
   // 빠른 휴식 & 알림음
   document.querySelectorAll('[data-quick-rest]').forEach((btn) => {
     btn.addEventListener('click', () => restTimer.start(Number(btn.dataset.quickRest)));
+  });
+  document.getElementById('btn-quick-custom-rest').addEventListener('click', () => {
+    openCustomRestModal('quick', state.settings.defaultRestSec || 30);
+  });
+  document.getElementById('custom-rest-chips').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-set-custom-rest]');
+    if (!btn) return;
+    document.getElementById('custom-rest-sec-input').value = btn.dataset.setCustomRest;
+  });
+  document.getElementById('btn-confirm-custom-rest').addEventListener('click', () => {
+    const raw = Number(document.getElementById('custom-rest-sec-input').value);
+    const sec = Math.max(5, Math.min(600, Math.round(raw || 0)));
+    if (!Number.isFinite(raw) || raw < 5 || raw > 600) {
+      showToast('휴식 시간은 5~600초 사이로 입력해 주세요.', 'error');
+      return;
+    }
+    if (state.customRestTarget === 'quick') {
+      closeModal('modal-custom-rest');
+      restTimer.start(sec);
+      showToast(`${sec}초 휴식 타이머를 시작했습니다.`);
+    } else if (typeof state.customRestTarget === 'number') {
+      const ex = state.draft.exercises[state.customRestTarget];
+      if (ex) {
+        ex.restSec = sec;
+        saveDraft(state.draft);
+        renderWorkoutView();
+        showToast(`"${ex.name}" 휴식 시간이 ${sec}초로 설정되었습니다.`, 'success');
+      }
+      closeModal('modal-custom-rest');
+    }
   });
   const toggleSound = () => {
     const next = !state.settings.timerSound;
@@ -1456,10 +1563,17 @@ function bindEvents() {
     const target = e.target;
     if (target.dataset.action === 'change-ex-rest') {
       const exIdx = Number(target.dataset.exIdx);
-      if (state.draft.exercises[exIdx]) {
-        state.draft.exercises[exIdx].restSec = Number(target.value) || 90;
-        saveDraft(state.draft);
+      const ex = state.draft.exercises[exIdx];
+      if (!ex) return;
+      if (target.value === 'custom') {
+        openCustomRestModal(exIdx, ex.restSec || state.settings.defaultRestSec || 60);
+        // 취소 시 셀렉트 표시가 '직접 입력...'에 머물지 않도록 기존 값으로 되돌림
+        target.value = String(ex.restSec || state.settings.defaultRestSec || 60);
+        return;
       }
+      ex.restSec = Number(target.value) || 90;
+      saveDraft(state.draft);
+      showToast(`"${ex.name}" 휴식 시간: ${ex.restSec}초`);
     }
   });
 
@@ -1486,6 +1600,10 @@ function bindEvents() {
       const set = ex.sets[setIdx];
       if (!set) return;
       set.completed = !set.completed;
+      if (set.completed && !state.draft.timerRunning && (state.draft.elapsedSec || 0) === 0) {
+        state.draft.startedAt = Date.now();
+        state.draft.timerRunning = true;
+      }
       saveDraft(state.draft);
       renderWorkoutView();
       if (set.completed) {
@@ -1745,7 +1863,9 @@ function bindEvents() {
       title: w.title,
       date: toLocalDateStr(),
       routineId: w.routineId || null,
-      startedAt: Date.now(),
+      startedAt: null,
+      elapsedSec: 0,
+      timerRunning: false,
       exercises: (w.exercises || []).map((ex) => ({
         id: uid('ex'),
         name: ex.name,
@@ -1809,6 +1929,17 @@ function bindEvents() {
     state.settings = saveSettings({ defaultRestSec: Number(btn.dataset.rest) });
     renderSettingsView();
     showToast(`기본 휴식 시간이 ${btn.dataset.rest}초로 설정되었습니다.`);
+  });
+  document.getElementById('btn-apply-custom-rest').addEventListener('click', () => {
+    const raw = Number(document.getElementById('input-custom-default-rest').value);
+    if (!Number.isFinite(raw) || raw < 5 || raw > 600) {
+      showToast('휴식 시간은 5~600초 사이 숫자로 입력해 주세요.', 'error');
+      return;
+    }
+    const sec = Math.round(raw);
+    state.settings = saveSettings({ defaultRestSec: sec });
+    renderSettingsView();
+    showToast(`기본 휴식 시간이 ${sec}초로 설정되었습니다.`, 'success');
   });
   document.getElementById('btn-test-sound').addEventListener('click', () => {
     const prev = restTimer.soundEnabled;
@@ -1893,6 +2024,20 @@ function bindEvents() {
     document.getElementById('pwa-install-banner').classList.add('hidden');
   });
   document.getElementById('btn-android-install').addEventListener('click', triggerAndroidInstall);
+}
+
+function openCustomRestModal(target, initialSec = 30) {
+  state.customRestTarget = target;
+  const input = document.getElementById('custom-rest-sec-input');
+  const subtitle = document.getElementById('custom-rest-subtitle');
+  if (input) input.value = String(initialSec || 30);
+  if (subtitle) {
+    subtitle.textContent =
+      target === 'quick'
+        ? '입력한 시간(초)으로 휴식 타이머를 바로 시작합니다.'
+        : '이 종목의 세트 완료 후 기본 휴식 시간(초)을 설정합니다.';
+  }
+  openModal('modal-custom-rest');
 }
 
 // ===== QR코드 공유 & 홈 화면 설치 도우미 =====

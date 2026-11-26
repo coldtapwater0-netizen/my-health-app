@@ -126,6 +126,10 @@
                   </svg>
                   <span id="workout-elapsed" class="tabular">00:00</span>
                 </span>
+                <div class="workout-timer-controls">
+                  <button id="btn-toggle-workout-timer" class="timer-ctrl-btn" type="button" title="운동 시간 시작/정지">▶ 시작</button>
+                  <button id="btn-reset-workout-timer" class="timer-ctrl-btn" type="button" title="운동 시간 초기화">↺</button>
+                </div>
               </div>
             </div>
             <div class="session-actions">
@@ -152,9 +156,11 @@
           <div class="quick-timer-strip">
             <span class="quick-timer-label">세트 번호 탭: 일반 / W(워밍업) / D(드롭)</span>
             <div class="quick-timer-btns">
+              <button class="chip-btn" type="button" data-quick-rest="30">30초</button>
               <button class="chip-btn" type="button" data-quick-rest="60">60초</button>
               <button class="chip-btn" type="button" data-quick-rest="90">90초</button>
               <button class="chip-btn" type="button" data-quick-rest="120">2분</button>
+              <button id="btn-quick-custom-rest" class="chip-btn" type="button">⏱️ 직접</button>
               <button id="btn-inline-sound" class="chip-btn sound-chip" type="button">
                 🔔 <span id="inline-sound-label">알림음 ON</span>
               </button>
@@ -485,10 +491,16 @@
           <div class="form-group">
             <span class="form-label">기본 세트 간 휴식 시간</span>
             <div id="default-rest-group" class="rest-preset-grid">
+              <button class="preset-btn" type="button" data-rest="30">30초</button>
+              <button class="preset-btn" type="button" data-rest="45">45초</button>
               <button class="preset-btn" type="button" data-rest="60">60초</button>
               <button class="preset-btn" type="button" data-rest="90">90초</button>
               <button class="preset-btn" type="button" data-rest="120">120초</button>
               <button class="preset-btn" type="button" data-rest="180">180초</button>
+            </div>
+            <div class="custom-rest-row">
+              <input id="input-custom-default-rest" class="dark-input tabular" type="number" inputmode="numeric" min="5" max="600" placeholder="직접 입력 (초, 예: 35)">
+              <button id="btn-apply-custom-rest" class="btn btn-secondary btn-sm" type="button">적용</button>
             </div>
           </div>
 
@@ -842,6 +854,37 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 8: 휴식 시간 직접 입력 -->
+  <div id="modal-custom-rest" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="custom-rest-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 id="custom-rest-title" class="modal-title">휴식 시간 직접 설정</h3>
+          <p id="custom-rest-subtitle" class="modal-subtitle">원하는 휴식 시간(초)을 고르거나 직접 입력하세요.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-modal="modal-custom-rest" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="quick-timer-btns" id="custom-rest-chips">
+          <button class="chip-btn" type="button" data-set-custom-rest="15">15초</button>
+          <button class="chip-btn" type="button" data-set-custom-rest="30">30초</button>
+          <button class="chip-btn" type="button" data-set-custom-rest="45">45초</button>
+          <button class="chip-btn" type="button" data-set-custom-rest="60">60초</button>
+          <button class="chip-btn" type="button" data-set-custom-rest="90">90초</button>
+          <button class="chip-btn" type="button" data-set-custom-rest="120">2분</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="custom-rest-sec-input">직접 입력 (5 ~ 600초)</label>
+          <input id="custom-rest-sec-input" class="dark-input tabular" type="number" inputmode="numeric" min="5" max="600" value="30">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" data-close-modal="modal-custom-rest">취소</button>
+        <button id="btn-confirm-custom-rest" class="btn btn-primary" type="button">적용하기</button>
       </div>
     </div>
   </div>

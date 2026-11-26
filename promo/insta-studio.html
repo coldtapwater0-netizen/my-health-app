@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1080, initial-scale=1.0">
+  <title>데이핏 (DayFit) 인스타그램 홍보 스튜디오</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #e2e8f0;
+      font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .slide {
+      width: 1080px;
+      height: 1350px;
+      position: relative;
+      overflow: hidden;
+      padding: 68px 64px 56px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(56, 189, 248, 0.25), transparent 44%),
+        radial-gradient(circle at 90% 16%, rgba(16, 185, 129, 0.20), transparent 42%),
+        radial-gradient(circle at 52% 94%, rgba(37, 99, 235, 0.14), transparent 50%),
+        linear-gradient(165deg, #f9fcff 0%, #edf5ff 55%, #f0fbf7 100%);
+      color: #0f172a;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    /* 은은한 배경 도형 */
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(2px);
+    }
+    .orb-1 {
+      width: 420px;
+      height: 420px;
+      right: -130px;
+      top: -110px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.22), transparent 70%);
+    }
+    .orb-2 {
+      width: 460px;
+      height: 460px;
+      left: -150px;
+      bottom: -140px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.18), transparent 70%);
+    }
+
+    /* 상단 브랜드/카테고리 칩 */
+    .top-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1.5px solid rgba(37, 99, 235, 0.14);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      border-radius: 999px;
+      padding: 10px 22px 10px 12px;
+      font-size: 21px;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -0.02em;
+    }
+
+    .top-chip-plain {
+      padding: 11px 22px;
+      color: #2563eb;
+      letter-spacing: 0.06em;
+      font-size: 18px;
+    }
+
+    .chip-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    /* 타이포그래피 */
+    .headline-wrap {
+      position: relative;
+      z-index: 2;
+    }
+
+    .headline {
+      margin: 22px 0 0;
+      font-size: 62px;
+      line-height: 1.18;
+      font-weight: 900;
+      letter-spacing: -0.035em;
+      color: #0f172a;
+    }
+
+    .accent-grad {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 52%, #10b981 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subcopy {
+      margin: 16px 0 0;
+      font-size: 26px;
+      line-height: 1.45;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: -0.02em;
+    }
+
+    /* 아이폰 목업 프레임 */
+    .phone-frame {
+      position: relative;
+      background: linear-gradient(145deg, #ffffff, #e2e8f0);
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      border-radius: 52px;
+      padding: 13px;
+      box-shadow:
+        0 38px 80px rgba(15, 23, 42, 0.16),
+        0 10px 24px rgba(37, 99, 235, 0.10);
+      flex-shrink: 0;
+    }
+
+    .phone-bezel {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      border-radius: 42px;
+      padding: 7px;
+      overflow: hidden;
+    }
+
+    .phone-screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 36px;
+      overflow: hidden;
+      background: #f4f7fb;
+      padding-top: 22px;
+    }
+
+    .phone-island {
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 76px;
+      height: 16px;
+      border-radius: 999px;
+      background: #0f172a;
+      z-index: 4;
+    }
+
+    .phone-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: top center;
+      display: block;
+    }
+
+    /* ===== SLIDE 1 ===== */
+    .s1-stage {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .s1-phone {
+      width: 492px;
+      height: 748px;
+    }
+
+    .float-badge {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1.5px solid rgba(37, 99, 235, 0.14);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.11);
+      border-radius: 22px;
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+    }
+
+    .float-badge-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .float-badge strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .float-badge span {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .fb-left {
+      left: -8px;
+      top: 150px;
+    }
+    .fb-right-top {
+      right: -12px;
+      top: 290px;
+    }
+    .fb-right-bottom {
+      left: 6px;
+      bottom: 92px;
+    }
+
+    /* ===== SLIDE 2 ===== */
+    .s2-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 468px 1fr;
+      gap: 34px;
+      align-items: center;
+      margin-top: 22px;
+    }
+
+    .s2-phone {
+      width: 468px;
+      height: 714px;
+    }
+
+    .feature-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1.5px solid rgba(37, 99, 235, 0.12);
+      border-radius: 24px;
+      padding: 24px 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feature-card-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.45;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    /* ===== SLIDE 3 ===== */
+    .s3-phones {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      margin-top: 10px;
+    }
+
+    .s3-phone-left {
+      width: 454px;
+      height: 694px;
+      transform: translateY(-18px);
+    }
+
+    .s3-phone-right {
+      width: 454px;
+      height: 694px;
+      transform: translateY(18px);
+    }
+
+    .s3-pills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .s3-pill {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1.5px solid rgba(37, 99, 235, 0.12);
+      border-radius: 20px;
+      padding: 18px 16px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    /* ===== SLIDE 4 ===== */
+    .s4-card {
+      flex: 1;
+      margin: 26px 0 22px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 2px solid rgba(37, 99, 235, 0.14);
+      border-radius: 38px;
+      padding: 44px 42px;
+      box-shadow: 0 28px 64px rgba(15, 23, 42, 0.10);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .qr-frame {
+      width: 390px;
+      height: 390px;
+      background: #ffffff;
+      border-radius: 32px;
+      border: 2px solid #e2e8f0;
+      padding: 20px;
+      box-shadow: 0 14px 36px rgba(37, 99, 235, 0.12);
+      display: grid;
+      place-items: center;
+    }
+
+    .qr-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .url-pill {
+      background: #eff6ff;
+      border: 1.5px solid rgba(37, 99, 235, 0.25);
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .steps-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .step-box {
+      background: #f8fafd;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 18px 14px;
+      text-align: center;
+    }
+
+    .step-box .step-num {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .step-box strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .step-box span {
+      font-size: 16px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    /* 하단 푸터 */
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 20px;
+      font-weight: 700;
+      color: #64748b;
+      position: relative;
+      z-index: 2;
+    }
+
+    .page-pill {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(37, 99, 235, 0.14);
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 18px;
+      font-weight: 800;
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <!-- SLIDE 1: 표지 (메인 훅) -->
+  <section id="slide-1" class="slide">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="headline-wrap">
+      <div class="top-chip">
+        <img class="chip-icon" src="../icons/icon-192.png" alt="데이핏 아이콘">
+        <span>DAYFIT · 데이핏</span>
+      </div>
+      <h1 class="headline">
+        오늘의 운동,<br>
+        <span class="accent-grad">가장 선명하게 기록하다</span>
+      </h1>
+      <p class="subcopy">볼륨·1RM 자동 계산부터 구글 시트 자동 동기화까지</p>
+    </div>
+
+    <div class="s1-stage">
+      <div class="phone-frame s1-phone">
+        <div class="phone-bezel">
+          <div class="phone-screen">
+            <div class="phone-island"></div>
+            <img src="../screenshots/dayfit-workout-mobile.png" alt="데이핏 운동 기록 실화면">
+          </div>
+        </div>
+      </div>
+
+      <div class="float-badge fb-left">
+        <div class="float-badge-icon" style="background:#fef3c7;">🔥</div>
+        <div>
+          <strong>PR 신기록 자동 배지</strong>
+          <span>이전 최고 기록 즉시 경신 알림</span>
+        </div>
+      </div>
+
+      <div class="float-badge fb-right-top">
+        <div class="float-badge-icon" style="background:#dbeafe;">📊</div>
+        <div>
+          <strong>총 볼륨 · 추정 1RM</strong>
+          <span>워밍업(W) 제외 실시간 계산</span>
+        </div>
+      </div>
+
+      <div class="float-badge fb-right-bottom">
+        <div class="float-badge-icon" style="background:#d1fae5;">☁️</div>
+        <div>
+          <strong>구글 시트 자동 동기화</strong>
+          <span>폰·PC 어디서든 이어서 기록</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>아이폰 · 갤럭시 홈 화면 웹앱 (PWA)</span>
+      <span class="page-pill">01 / 04</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: 운동 기록 디테일 -->
+  <section id="slide-2" class="slide">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="headline-wrap">
+      <div class="top-chip top-chip-plain">SMART WORKOUT LOG</div>
+      <h1 class="headline">
+        체크 한 번으로<br>
+        <span class="accent-grad">루틴부터 휴식 타이머까지</span>
+      </h1>
+    </div>
+
+    <div class="s2-grid">
+      <div class="phone-frame s2-phone">
+        <div class="phone-bezel">
+          <div class="phone-screen">
+            <div class="phone-island"></div>
+            <img src="../screenshots/dayfit-workout-mobile.png" alt="데이핏 스마트 운동 화면">
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-stack">
+        <div class="feature-card">
+          <div class="feature-card-head">🏷️ 일반 · 워밍업(W) · 드롭(D)</div>
+          <p>세트 번호를 탭해 유형을 전환하세요. 워밍업 세트는 볼륨·1RM 통계에서 자동 제외됩니다.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-head">🤸 중량 &amp; 맨몸 운동 완벽 지원</div>
+          <p>벤치·스쿼트는 물론 풀업·푸시업·플랭크까지 횟수와 시간(초)으로 깔끔하게 기록합니다.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-head">⚖️ 바벨 원판 무게 계산기</div>
+          <p>목표 무게만 입력하면 20kg 바벨 기준 양쪽에 끼울 원판 조합을 바로 알려줍니다.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card-head">⏱️ 세트 간 자동 휴식 타이머</div>
+          <p>세트 완료를 누르면 바로 카운트다운 시작! 알림음 ON/OFF도 원터치로 조절됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>4분할 기본 루틴 + 커스텀 루틴 지원</span>
+      <span class="page-pill">02 / 04</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: 기록·성장 & 출석 캘린더 -->
+  <section id="slide-3" class="slide">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="headline-wrap">
+      <div class="top-chip top-chip-plain">GROWTH &amp; ATTENDANCE</div>
+      <h1 class="headline">
+        쌓여가는 운동 기록,<br>
+        <span class="accent-grad">눈으로 보는 나의 성장</span>
+      </h1>
+      <p class="subcopy">출석 캘린더 · 볼륨 &amp; 1RM 그래프 · 보충제 · 인바디까지 한곳에</p>
+    </div>
+
+    <div class="s3-phones">
+      <div class="phone-frame s3-phone-left">
+        <div class="phone-bezel">
+          <div class="phone-screen">
+            <div class="phone-island"></div>
+            <img src="../screenshots/dayfit-history-mobile.png" alt="데이핏 출석 캘린더 화면">
+          </div>
+        </div>
+      </div>
+
+      <div class="phone-frame s3-phone-right">
+        <div class="phone-bezel">
+          <div class="phone-screen">
+            <div class="phone-island"></div>
+            <img src="../screenshots/dayfit-charts-mobile.png" alt="데이핏 성장 그래프 화면">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="s3-pills">
+      <div class="s3-pill">📅 운동 · 보충제 출석 달력</div>
+      <div class="s3-pill">📈 총 볼륨 &amp; 1RM 성장 곡선</div>
+      <div class="s3-pill">⚖️ 체중 · 골격근 · 체지방 추이</div>
+    </div>
+
+    <div class="slide-footer">
+      <span>부위별 자극 비중 도넛 차트 제공</span>
+      <span class="page-pill">03 / 04</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: QR코드 바로 시작 -->
+  <section id="slide-4" class="slide">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="headline-wrap">
+      <div class="top-chip">
+        <img class="chip-icon" src="../icons/icon-192.png" alt="데이핏 아이콘">
+        <span>앱스토어 설치 없이 3초 만에 시작</span>
+      </div>
+      <h1 class="headline">
+        카메라로 QR 찍고<br>
+        <span class="accent-grad">내 폰 홈 화면에 바로 추가</span>
+      </h1>
+    </div>
+
+    <div class="s4-card">
+      <div class="qr-frame">
+        <img
+          id="promo-qr-img"
+          src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&ecc=M&data=https%3A%2F%2Fmy-health-app-dun.vercel.app%2F"
+          onerror="this.onerror=null;this.src='https://quickchart.io/qr?size=400&margin=2&ecLevel=M&text=https%3A%2F%2Fmy-health-app-dun.vercel.app%2F';"
+          alt="데이핏 접속 QR코드"
+        >
+      </div>
+
+      <div class="url-pill">https://my-health-app-dun.vercel.app/</div>
+
+      <div class="steps-row">
+        <div class="step-box">
+          <span class="step-num">1</span>
+          <strong>카메라 QR 스캔</strong>
+          <span>Safari로 바로 열기</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">2</span>
+          <strong>홈 화면에 추가</strong>
+          <span>공유(□↑) 버튼 탭</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">3</span>
+          <strong>닉네임 + PIN 시작</strong>
+          <span>커플·친구 각자 분리 저장</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>완전 무료 · 라이트 / 다크 모드 지원</span>
+      <span class="page-pill">04 / 04</span>
+    </div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const slideNum = params.get('slide') || '1';
+    const target = document.getElementById('slide-' + slideNum) || document.getElementById('slide-1');
+    target.classList.add('active');
+
+    if (params.get('preview') === '1') {
+      target.style.transform = 'scale(0.64)';
+      target.style.transformOrigin = 'top left';
+      document.body.style.width = '692px';
+      document.body.style.height = '864px';
+      document.body.style.overflow = 'hidden';
+    }
+  </script>
+</body>
+</html>
